@@ -21,6 +21,7 @@
 #include <asm/types.h>
 #include <linux/err.h>
 #include <linux/printk.h>
+#include <linux/delay.h>
 
 struct mtk_serial_regs {
 	u32 rbr;
@@ -41,6 +42,8 @@ struct mtk_serial_regs {
 	u32 guard;
 	u32 rx_sel;
 };
+
+static inline void _debug_uart_putc(int ch);
 
 #define thr rbr
 #define iir fcr
@@ -94,94 +97,24 @@ struct mtk_serial_priv {
 
 static void _mtk_serial_setbrg(struct mtk_serial_priv *priv, int baud,
 			       uint clk_rate)
-{
-	u32 quot, realbaud, samplecount = 1;
+{}
 
-	/* Special case for low baud clock */
-	if (baud <= 115200 && clk_rate == 12000000) {
-		writel(3, &priv->regs->highspeed);
-
-		quot = DIV_ROUND_CLOSEST(clk_rate, 256 * baud);
-		if (quot == 0)
-			quot = 1;
-
-		samplecount = DIV_ROUND_CLOSEST(clk_rate, quot * baud);
-
-		realbaud = clk_rate / samplecount / quot;
-		if (realbaud > BAUD_ALLOW_MAX(baud) ||
-		    realbaud < BAUD_ALLOW_MIX(baud)) {
-			pr_info("baud %d can't be handled\n", baud);
-		}
-
-		goto set_baud;
-	}
-
-	/*
-	 * Upstream linux use highspeed for anything >= 115200 and lowspeed
-	 * for < 115200. Simulate this if we are using the upstream compatible.
-	 */
-	if (priv->force_highspeed ||
-	    (priv->upstream_highspeed_logic && baud >= 115200))
-		goto use_hs3;
-
-	if (baud <= 115200) {
-		writel(0, &priv->regs->highspeed);
-		quot = DIV_ROUND_CLOSEST(clk_rate, 16 * baud);
-	} else if (baud <= 576000) {
-		writel(2, &priv->regs->highspeed);
-
-		/* Set to next lower baudrate supported */
-		if ((baud == 500000) || (baud == 576000))
-			baud = 460800;
-
-		quot = DIV_ROUND_UP(clk_rate, 4 * baud);
-	} else {
-use_hs3:
-		writel(3, &priv->regs->highspeed);
-
-		quot = DIV_ROUND_UP(clk_rate, 256 * baud);
-		samplecount = DIV_ROUND_CLOSEST(clk_rate, quot * baud);
-	}
-
-set_baud:
-	/* set divisor */
-	writel(UART_LCR_WLS_8 | UART_LCR_DLAB, &priv->regs->lcr);
-	writel(quot & 0xff, &priv->regs->dll);
-	writel((quot >> 8) & 0xff, &priv->regs->dlm);
-	writel(UART_LCR_WLS_8, &priv->regs->lcr);
-
-	/* set highspeed mode sample count & point */
-	writel(samplecount - 1, &priv->regs->sample_count);
-	writel((samplecount - 2) >> 1, &priv->regs->sample_point);
-}
 
 static int _mtk_serial_putc(struct mtk_serial_priv *priv, const char ch)
 {
-	if (!(readl(&priv->regs->lsr) & UART_LSR_THRE))
-		return -EAGAIN;
-
-	writel(ch, &priv->regs->thr);
-
-	if (ch == '\n')
-		schedule();
+	_debug_uart_putc(ch);
 
 	return 0;
 }
 
 static int _mtk_serial_getc(struct mtk_serial_priv *priv)
 {
-	if (!(readl(&priv->regs->lsr) & UART_LSR_DR))
-		return -EAGAIN;
-
-	return readl(&priv->regs->rbr);
+	return 0;
 }
 
 static int _mtk_serial_pending(struct mtk_serial_priv *priv, bool input)
 {
-	if (input)
-		return (readl(&priv->regs->lsr) & UART_LSR_DR) ? 1 : 0;
-	else
-		return (readl(&priv->regs->lsr) & UART_LSR_THRE) ? 0 : 1;
+	return 0;
 }
 
 #if CONFIG_IS_ENABLED(DM_SERIAL)
@@ -239,37 +172,6 @@ static int mtk_serial_probe(struct udevice *dev)
 
 static int mtk_serial_of_to_plat(struct udevice *dev)
 {
-	struct mtk_serial_priv *priv = dev_get_priv(dev);
-	fdt_addr_t addr;
-	int err;
-
-	addr = dev_read_addr(dev);
-	if (addr == FDT_ADDR_T_NONE)
-		return -EINVAL;
-
-	priv->regs = map_physmem(addr, 0, MAP_NOCACHE);
-
-	err = clk_get_by_index(dev, 0, &priv->clk);
-	if (err) {
-		err = dev_read_u32(dev, "clock-frequency", &priv->fixed_clk_rate);
-		if (err) {
-			dev_err(dev, "baud clock not defined\n");
-			return -EINVAL;
-		}
-	} else {
-		err = clk_get_rate(&priv->clk);
-		if (IS_ERR_VALUE(err)) {
-			dev_err(dev, "invalid baud clock\n");
-			return -EINVAL;
-		}
-	}
-
-	clk_get_by_name(dev, "bus", &priv->clk_bus);
-
-	priv->force_highspeed = dev_read_bool(dev, "mediatek,force-highspeed");
-	priv->upstream_highspeed_logic =
-		device_is_compatible(dev, "mediatek,mt6577-uart");
-
 	return 0;
 }
 
@@ -450,7 +352,6 @@ void mtk_serial_initialize(void)
 
 #endif
 
-#ifdef CONFIG_DEBUG_UART_MTK
 
 #include <debug_uart.h>
 
@@ -472,14 +373,12 @@ static inline void _debug_uart_init(void)
 static inline void _debug_uart_putc(int ch)
 {
 	struct mtk_serial_regs __iomem *regs =
-		(void *) CONFIG_VAL(DEBUG_UART_BASE);
+		(void *) 0x11001000;
 
-	while (!(readl(&regs->lsr) & UART_LSR_THRE))
-		;
+	mdelay(2);
 
 	writel(ch, &regs->thr);
 }
 
 DEBUG_UART_FUNCS
 
-#endif
