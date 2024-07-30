@@ -202,7 +202,13 @@
 		compatible = "fixed-clock";
 		#clock-cells = <0>;
 		clock-frequency = <26000000>;
-		clock-output-names = "clk26m";
+		clock-output-names = "clk26m", "baud";
+	};
+
+	baud: osci {
+		compatible = "fixed-clock";
+		clock-frequency = <24000000>;
+		clock-output-names = "baud";
 	};
 
 	psci {
@@ -261,17 +267,19 @@
 			//clock-names = "apdma";
 			dma-requests = <6>;
 			#dma-cells = <1>;
+			status = "disabled";
 		};
 
 		uart0: serial@11001000 {
 			compatible = "mediatek,mt6577-uart";
 			reg = <0 0x11001000 0 0x1000>;
 			interrupts = <GIC_SPI 397 IRQ_TYPE_LEVEL_HIGH 0>;
-			clocks = <&clk26m>/*, <&pericfg_ao CLK_PERAOP_UART0> */;
-			clock-names = "baud", "bus";
+			clocks = <&baud>/*, <&pericfg_ao CLK_PERAOP_UART0> */;
+			clock-names = "baud";
 			dmas = <&apdma 0 &apdma 1>;
 			dma-names = "tx", "rx";
 			uart-line = <0>;
+			status = "disabled";
 		};
 
 		uart1: serial@11002000 {
@@ -283,6 +291,7 @@
 			dmas = <&apdma 2 &apdma 3>;
 			dma-names = "tx", "rx";
 			uart-line = <1>;
+			status = "disabled";
 		};
 
 		uart2: serial@11003000 {
@@ -294,6 +303,7 @@
 			dmas = <&apdma 4 &apdma 5>;
 			dma-names = "tx", "rx";
 			uart-line = <2>;
+			status = "disabled";
 		};
 	};
 

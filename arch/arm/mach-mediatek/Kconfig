@@ -15,6 +15,7 @@ choice
 config TARGET_MT6878
 	bool "MediaTek MT6878 SoC"
 	select ARM64
+	select LINUX_KERNEL_IMAGE_HEADER
 	help
 	  The MediaTek MT6878 is a ARM64-based SoC with 4x Cortex-A78 and
 	  4x Cortex-A55 including UART, SPI, USB, SD/MMC cards, UFS 3.1,
@@ -161,6 +162,9 @@ config MTK_BROM_HEADER_INFO
 	default "media=nor" if TARGET_MT8518 || TARGET_MT8512 || TARGET_MT7629 || TARGET_MT7622
 	default "media=emmc" if TARGET_MT8516 || TARGET_MT8365 || TARGET_MT8183
 	default "media=snand;nandinfo=2k+64" if TARGET_MT7981 || TARGET_MT7986 || TARGET_MT7988
-	default "lk=1" if TARGET_MT7623
+	default "lk=1" if TARGET_MT7623 || TARGET_MT6878
+
+config LNX_KRNL_IMG_TEXT_OFFSET_BASE
+        default TEXT_BASE if TARGET_MT6878
 
 endif
