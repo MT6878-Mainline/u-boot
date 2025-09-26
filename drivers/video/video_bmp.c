@@ -54,6 +54,19 @@ static u32 get_bmp_col_rgba8888(struct bmp_color_table_entry *cte)
 }
 
 /**
+ * get_bmp_col_argb8888() - Convert a colour-table entry into a argb8888 pixel value
+ *
+ * Return: value to write to the argb8888 frame buffer for this palette entry
+ */
+static u32 get_bmp_col_argb8888(struct bmp_color_table_entry *cte)
+{
+	return (0xff << 24U) |
+		(cte->red << 16U) |
+		(cte->green << 8U) |
+		(cte->blue);
+}
+
+/**
  * write_pix8() - Write a pixel from a BMP image into the framebuffer
  *
  * This handles frame buffers with 8, 16, 24 or 32 bits per pixel
@@ -84,6 +97,8 @@ static void write_pix8(u8 *fb, uint bpix, enum video_format eformat,
 			*(u32 *)fb = get_bmp_col_x2r10g10b10(cte);
 		} else if (eformat == VIDEO_RGBA8888) {
 			*(u32 *)fb = get_bmp_col_rgba8888(cte);
+		} else if (eformat == VIDEO_ARGB8888) {
+			*(u32 *)fb = get_bmp_col_argb8888(cte);
 		} else {
 			*fb++ = cte->blue;
 			*fb++ = cte->green;
@@ -405,6 +420,11 @@ int video_bmp_display(struct udevice *dev, ulong bmp_image, int x, int y,
 						*fb++ = (pix >> 16) & 0xff;
 						*fb++ = (pix >> 8) & 0xff;
 						*fb++ = 0xff;
+					} else if (eformat == VIDEO_ARGB8888) {
+						*fb++ = 0xff;
+						*fb++ = *bmap++;
+						*fb++ = *bmap++;
+						*fb++ = *bmap++;
 					} else {
 						*fb++ = *bmap++;
 						*fb++ = *bmap++;
@@ -443,6 +463,13 @@ int video_bmp_display(struct udevice *dev, ulong bmp_image, int x, int y,
 						*fb++ = (pix >> 16) & 0xff;
 						*fb++ = (pix >> 8) & 0xff;
 						*fb++ = 0xff; /* opacity */
+					} else if (eformat == VIDEO_ARGB8888) {
+						u32 pix;
+
+						*fb++ = 0xff; /* opacity */
+						*fb++ = (pix >> 24) & 0xff;
+						*fb++ = (pix >> 16) & 0xff;
+						*fb++ = (pix >> 8) & 0xff;
 					} else {
 						*fb++ = *bmap++;
 						*fb++ = *bmap++;
