@@ -9,6 +9,17 @@ config SYS_VENDOR
 choice
 	prompt "MediaTek board select"
 
+config TARGET_MT6878
+	bool "MediaTek MT6878 SoC"
+	select ARM64
+	select CPU
+	select REGMAP
+	select SYSCON
+	help
+	  The MediaTek MT6878 is a ARM64-based SoC with 4x Cortex-A78 and
+	  4x Cortex-A55 including UART, SPI, USB, SD/MMC cards, UFS 3.1,
+	  video encoding, LPDDR4x and LPDDR5 DRAM.
+
 config TARGET_MT7622
 	bool "MediaTek MT7622 SoC"
 	select ARM64
@@ -123,6 +134,7 @@ endchoice
 
 config SYS_BOARD
 	string "Board name"
+	default "mt6878" if TARGET_MT6878
 	default "mt7622" if TARGET_MT7622
 	default "mt7623" if TARGET_MT7623
 	default "mt7629" if TARGET_MT7629
@@ -141,6 +153,7 @@ config SYS_BOARD
 	  be used.
 
 config SYS_CONFIG_NAME
+	default "mt6878" if TARGET_MT6878
 	default "mt7622" if TARGET_MT7622
 	default "mt7623" if TARGET_MT7623
 	default "mt7629" if TARGET_MT7629
