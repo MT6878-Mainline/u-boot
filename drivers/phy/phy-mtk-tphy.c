@@ -91,6 +91,10 @@
 #define P2C_FORCE_SUSPENDM		BIT(18)
 #define P2C_FORCE_TERMSEL		BIT(17)
 #define P2C_RG_DATAIN			GENMASK(13, 10)
+#define P2C_FORCE_AVALID		BIT(10)
+#define P2C_FORCE_SESSEND		BIT(12)
+#define P2C_FORCE_VBUSVALID		BIT(13)
+#define P2C_FORCE_IDPULLUP		BIT(8)
 #define P2C_RG_DMPULLDOWN		BIT(7)
 #define P2C_RG_DPPULLDOWN		BIT(6)
 #define P2C_RG_XCVRSEL			GENMASK(5, 4)
@@ -107,8 +111,10 @@
 #define P2C_FORCE_IDDIG			BIT(9)
 #define P2C_RG_VBUSVALID		BIT(5)
 #define P2C_RG_SESSEND			BIT(4)
+#define P2C_RG_BVALID			BIT(3)
 #define P2C_RG_AVALID			BIT(2)
 #define P2C_RG_IDDIG			BIT(1)
+#define P2C_RG_IDPULLUP			BIT(0)
 
 #define U3P_U3_CHIP_GPIO_CTLD		0x0c
 #define P3C_REG_IP_SW_RST		BIT(31)
@@ -347,6 +353,14 @@ static void u2_phy_instance_power_on(struct mtk_tphy *tphy,
 
 	clrbits_le32(u2_banks->com + U3P_U2PHYDTM0,
 		     P2C_RG_XCVRSEL | P2C_RG_DATAIN | P2C_DTM0_PART_MASK);
+
+	/* Set FORCE modes for manual role switching */
+	setbits_le32(u2_banks->com + U3P_U2PHYDTM1, P2C_FORCE_IDPULLUP
+		| P2C_FORCE_IDDIG | P2C_FORCE_AVALID | P2C_FORCE_VBUSVALID
+		| P2C_FORCE_SESSEND);
+	setbits_le32(u2_banks->com + U3P_U2PHYDTM1, P2C_RG_IDPULLUP | P2C_RG_BVALID);
+
+	setbits_le32(u2_banks->com + U3P_U2PHYDTM1, P2C_RG_IDDIG);
 
 	/* OTG Enable */
 	setbits_le32(u2_banks->com + U3P_USBPHYACR6,
