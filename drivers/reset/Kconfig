@@ -57,6 +57,15 @@ config RESET_TI_SCI
 	  available on some new TI's SoCs. If you wish to use reset resources
 	  managed by the TI System Controller, say Y here. Otherwise, say N.
 
+config RESET_TI_SYSCON
+	tristate "TI SYSCON Reset Driver"
+	depends on DM_RESET
+	help
+	  This enables the reset driver support for TI devices with
+	  memory-mapped reset registers as part of a syscon device node. If
+	  you wish to use the reset framework for such memory-mapped devices,
+	  say Y here. Otherwise, say N.
+
 config RESET_BCM6345
 	bool "Reset controller driver for BCM6345"
 	depends on DM_RESET && ARCH_BMIPS
