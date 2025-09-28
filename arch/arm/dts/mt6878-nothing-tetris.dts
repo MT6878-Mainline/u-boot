@@ -1,0 +1,85 @@
+/*
+* SPDX-License-Identifier: (GPL-2.0 OR MIT)
+*/
+
+/dts-v1/;
+#include "mt6878.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+
+/ {
+	model = "Nothing CMF Phone 1";
+	chassis-type = "handset";
+	compatible = "nothing,tetris", "mediatek,mt6878";
+
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	aliases {
+		serial0 = &uart0;
+	};
+
+	chosen {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		simplefb@fe0d0000 {
+			compatible = "simple-framebuffer";
+			reg = <0x0 0xfe0d0000 0x0 0xa08c00>;
+			width = <1080>;
+			height = <2400>;
+			stride = <(1088 * 4)>;
+			format = "a8r8g8b8";
+		};
+	};
+
+	memory {
+		device_type = "memory";
+		reg = <0x0 0x40000000 0x2 0x0>;
+	};
+
+	gpio_keys: gpio-keys {
+		compatible = "gpio-keys";
+
+		pinctrl-0 = <&key_gpio_default>;
+		pinctrl-names = "default";
+
+		voldown-key {
+			label = "Volume Down";
+			linux,code = <KEY_VOLUMEDOWN>;
+
+			gpios = <&pio 54 GPIO_ACTIVE_LOW>;
+		};
+	};
+};
+
+&pio {
+	key_gpio_default:key-default {
+		pins-cmd1-dat {
+			//pinmux = <PINMUX_GPIO54__FUNC_GPIO54>;
+			input-enable;
+			bias-pull-up;
+		};
+	};
+};
+
+&u2port {
+	status = "okay";
+};
+
+&uart0 {
+	status = "okay";
+};
+
+&ufshci {
+	status = "okay";
+};
+
+&ufsphy {
+	status = "okay";
+};
+
+&usbphy {
+	status = "okay";
+};
