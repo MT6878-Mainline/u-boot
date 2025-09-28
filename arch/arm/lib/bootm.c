@@ -38,6 +38,12 @@
 #endif
 #include <asm/setup.h>
 
+#ifdef CONFIG_MTK_SMC_JUMP
+#include <linux/arm-smccc.h>
+
+#define MTK_SIP_KERNEL_BOOT			0xC2000115
+#endif
+
 DECLARE_GLOBAL_DATA_PTR;
 
 static struct tag *params;
@@ -290,6 +296,10 @@ static void boot_jump_linux(struct bootm_headers *images, int flag)
 			void *res2);
 	int fake = (flag & BOOTM_STATE_OS_FAKE_GO);
 
+#ifdef CONFIG_MTK_SMC_JUMP
+	struct arm_smccc_res smccc_res = {0};
+#endif
+
 	kernel_entry = (void (*)(void *fdt_addr, void *res0, void *res1,
 				void *res2))images->ep;
 
@@ -306,6 +316,17 @@ static void boot_jump_linux(struct bootm_headers *images, int flag)
 		do_nonsec_virt_switch();
 
 		update_os_arch_secondary_cores(images->os.arch);
+
+#ifdef CONFIG_MTK_SMC_JUMP
+		arm_smccc_smc(MTK_SIP_KERNEL_BOOT,
+			      (u64)kernel_entry,    // decompressed kernel
+			      (u64)images->ft_addr, // FDT
+			       0, 1, 0, 0, 0,
+			       &smccc_res);
+
+		// The SMC may take a few ms to jump to kernel. Hang.
+		while(1) {}
+#endif
 
 #ifdef CONFIG_ARMV8_SWITCH_TO_EL1
 		armv8_switch_to_el2((u64)images->ft_addr, 0, 0, 0,

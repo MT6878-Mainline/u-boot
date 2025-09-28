@@ -15,6 +15,7 @@ config TARGET_MT6878
 	select CPU
 	select REGMAP
 	select SYSCON
+	select MTK_SMC_JUMP
 	help
 	  The MediaTek MT6878 is a ARM64-based SoC with 4x Cortex-A78 and
 	  4x Cortex-A55 including UART, SPI, USB, SD/MMC cards, UFS 3.1,
@@ -177,5 +178,12 @@ config MTK_TZ_MOVABLE
 	select ARCH_MISC_INIT
 	select OF_SYSTEM_SETUP
 	bool
+
+config MTK_SMC_JUMP
+	bool "Jump to payload via a MediaTek SMC call"
+	help
+	  For modern SoCs running U-Boot as EL1 (such as MT6878), Secure World
+	  needs to be notified about jumping to kernel, via a SMC call. If this
+	  does not happen, there is undefined behaviour.
 
 endif
