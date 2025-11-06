@@ -56,8 +56,8 @@ static int ufs_mtk_hce_enable_notify(struct ufs_hba *hba,
 			ufshcd_rmwl(hba, UFS_MASK(0x7FFF, 8),
 				    0x453000, REG_UFS_MMIO_OPT_CTRL_0);
 		}
-	}
 
+	}
 	return 0;
 }
 
@@ -81,10 +81,26 @@ static int ufs_mtk_unipro_set_lpm(struct ufs_hba *hba, bool lpm)
 	return ret;
 }
 
+void mtk_ufs_bootloader_smc_reset(void)
+{
+	struct arm_smccc_res smccc_res;
+
+	ufs_mtk_bootloader_device_reset_ctrl(0, smccc_res);
+	mdelay(10);
+	ufs_mtk_bootloader_device_reset_ctrl(1, smccc_res);
+}
+
 static int ufs_mtk_pre_link(struct ufs_hba *hba)
 {
 	int ret;
 	u32 tmp;
+
+	/*
+	 * As we are the primary bootloader, and the first thing
+	 * to run in non-secure world, we need to reset the UFS
+	 * controller via the SMC to acknowledge the switch.
+	 */
+	mtk_ufs_bootloader_smc_reset();
 
 	ret = ufs_mtk_unipro_set_lpm(hba, false);
 	if (ret)
@@ -123,9 +139,9 @@ static void ufs_mtk_cfg_unipro_cg(struct ufs_hba *hba, bool enable)
 		ufshcd_dme_get(hba,
 			       UIC_ARG_MIB(VS_SAVEPOWERCONTROL), &tmp);
 		tmp = tmp |
-		      (1 << RX_SYMBOL_CLK_GATE_EN) |
-		      (1 << SYS_CLK_GATE_EN) |
-		      (1 << TX_CLK_GATE_EN);
+			(1 << RX_SYMBOL_CLK_GATE_EN) |
+			(1 << SYS_CLK_GATE_EN) |
+			(1 << TX_CLK_GATE_EN);
 		ufshcd_dme_set(hba,
 			       UIC_ARG_MIB(VS_SAVEPOWERCONTROL), tmp);
 

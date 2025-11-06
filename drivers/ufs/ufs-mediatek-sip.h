@@ -19,6 +19,7 @@
 								   ARM_SMCCC_OWNER_SIP, 0x276)
 #define UFS_MTK_SIP_DEVICE_RESET		BIT(1)
 #define UFS_MTK_SIP_REF_CLK_NOTIFICATION	BIT(3)
+#define UFS_MTK_SIP_BL_UFS_CONTROL		0x8200040D
 
 /*
  * SMC call wrapper function
@@ -52,5 +53,8 @@ static inline void _ufs_mtk_smc(struct ufs_mtk_smc_arg s)
 
 #define ufs_mtk_device_reset_ctrl(high, res) \
 	ufs_mtk_smc(UFS_MTK_SIP_DEVICE_RESET, &(res), high)
+
+#define ufs_mtk_bootloader_device_reset_ctrl(high, res) \
+	ufs_mtk_smc(UFS_MTK_SIP_BL_UFS_CONTROL, &(res), high)
 
 #endif /* !_UFS_MEDIATEK_SIP_H */
