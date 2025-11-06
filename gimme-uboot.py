@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 
+# script donated by Roger (R0rt1z2) <3
+
 from liblk.image import LkImage
 from liblk.structures import ImageHeader
 from liblk.structures.partition import LkPartition
 import argparse
 
+target = 'lk'
+
 def create_partition(data, original_header, load_addr=0xFFFFFFFF, mode=0xFFFFFFFF):
     header = ImageHeader.from_buffer_copy(bytes(original_header))
-    setattr(header, 'name', 'lk')
+    setattr(header, 'name', target)
     setattr(header, 'data_size', len(data))
     setattr(header, 'memory_address', load_addr)
     setattr(header, 'mode', mode)
@@ -35,21 +39,21 @@ def replace_partition(lk_path, uboot_path, output_path, load_addr=0xFFFFFFFF, mo
         print("  - %s: %d bytes" % (name, len(partition)))
     print("")
 
-    if 'lk' not in lk_image.partitions:
-        raise ValueError("No 'lk' partition found in the image")
+    if target not in lk_image.partitions:
+        raise ValueError(f"No {target} partition found in the image")
     
     with open(uboot_path, 'rb') as f:
         uboot_data = f.read()
     
     print("U-Boot size: %d bytes" % len(uboot_data))
     
-    original_lk = lk_image.partitions['lk']
+    original_lk = lk_image.partitions[target]
     print("Original LK partition has %d certificates" % len(original_lk.certs))
     
     uboot_partition = create_partition(uboot_data, original_lk.header, load_addr, mode)
     uboot_partition.certs = original_lk.certs.copy()
     
-    lk_image.partitions['lk'] = uboot_partition
+    lk_image.partitions[target] = uboot_partition
     rebuild_image_contents(lk_image)
     
     print("Saving modified image to: %s" % output_path)
