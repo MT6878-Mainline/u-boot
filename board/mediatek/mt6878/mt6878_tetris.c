@@ -10,10 +10,13 @@
 #include <asm/system.h>
 #include <fastboot.h>
 #include <string.h>
+#include <asm/io.h>
 
 DECLARE_GLOBAL_DATA_PTR;
 
-void __weak fastboot_oem_board(char *cmd_parameter, void *data, u32 size, char *response)
+#define MTK_WDT_STAGE			0x24
+
+void fastboot_oem_board(char *cmd_parameter, void *data, u32 size, char *response)
 {
 	if(strncmp(cmd_parameter, "poweroff", 10) == 0)
 	{

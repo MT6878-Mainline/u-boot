@@ -113,8 +113,8 @@ static int mtk_wdt_start(struct udevice *dev, u64 timeout_ms, ulong flags)
 	mtk_wdt_reset(dev);
 
 	/* Enable watchdog reset signal */
-	setbits_le32(priv->base + MTK_WDT_MODE,
-		     WDT_MODE_EN | WDT_MODE_KEY | WDT_MODE_EXTEN);
+	//setbits_le32(priv->base + MTK_WDT_MODE,
+	//	     WDT_MODE_EN | WDT_MODE_KEY | WDT_MODE_EXTEN);
 
 	return 0;
 }

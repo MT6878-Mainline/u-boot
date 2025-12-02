@@ -43,11 +43,11 @@ static inline void _ufs_mtk_smc(struct ufs_mtk_smc_arg s)
 		      s.v1, s.v2, s.v3, s.v4, s.v5, s.v6, s.res);
 }
 
+#if defined(CONFIG_UFS_MEDIATEK_NON_EL3)
 #define ufs_mtk_smc(...) \
 	_ufs_mtk_smc((struct ufs_mtk_smc_arg) {__VA_ARGS__})
 
 /* SIP interface */
-
 #define ufs_mtk_ref_clk_notify(on, stage, res) \
 	ufs_mtk_smc(UFS_MTK_SIP_REF_CLK_NOTIFICATION, &(res), on, stage)
 
@@ -56,5 +56,9 @@ static inline void _ufs_mtk_smc(struct ufs_mtk_smc_arg s)
 
 #define ufs_mtk_bootloader_device_reset_ctrl(high, res) \
 	ufs_mtk_smc(UFS_MTK_SIP_BL_UFS_CONTROL, &(res), high)
+#else
+#define ufs_mtk_ref_clk_notify(on, stage, res) \
+	do {} while (0) // Purely for ATF.
+#endif
 
 #endif /* !_UFS_MEDIATEK_SIP_H */

@@ -621,7 +621,7 @@ static int ufshcd_hba_enable(struct ufs_hba *hba)
 	mdelay(1);
 
 	/* wait for the host controller to complete initialization */
-	retry = 10;
+	retry = 1000;
 	while (ufshcd_is_hba_active(hba)) {
 		if (retry) {
 			retry--;

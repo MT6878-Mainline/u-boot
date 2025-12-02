@@ -7,7 +7,7 @@ from liblk.structures import ImageHeader
 from liblk.structures.partition import LkPartition
 import argparse
 
-target = 'lk'
+target = 'bl2_ext'
 
 def create_partition(data, original_header, load_addr=0xFFFFFFFF, mode=0xFFFFFFFF):
     header = ImageHeader.from_buffer_copy(bytes(original_header))

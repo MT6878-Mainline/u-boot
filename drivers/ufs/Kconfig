@@ -29,6 +29,10 @@ config UFS_MEDIATEK
 
 	  If unsure, say N.
 
+config UFS_MEDIATEK_NON_EL3
+	bool "Non-EL3 MediaTek UFS"
+	depends on UFS_MEDIATEK
+
 config QCOM_UFS
 	bool "Qualcomm Host Controller driver for UFS"
 	depends on UFS && ARCH_SNAPDRAGON

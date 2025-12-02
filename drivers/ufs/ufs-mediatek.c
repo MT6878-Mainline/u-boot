@@ -81,7 +81,8 @@ static int ufs_mtk_unipro_set_lpm(struct ufs_hba *hba, bool lpm)
 	return ret;
 }
 
-void mtk_ufs_bootloader_smc_reset(void)
+#if defined(CONFIG_UFS_MEDIATEK_NON_EL3)
+void ufs_mtk_bootloader_smc_reset(void)
 {
 	struct arm_smccc_res smccc_res;
 
@@ -89,18 +90,21 @@ void mtk_ufs_bootloader_smc_reset(void)
 	mdelay(10);
 	ufs_mtk_bootloader_device_reset_ctrl(1, smccc_res);
 }
+#endif
 
 static int ufs_mtk_pre_link(struct ufs_hba *hba)
 {
 	int ret;
 	u32 tmp;
 
+#if defined(CONFIG_UFS_MEDIATEK_NON_EL3)
 	/*
 	 * As we are the primary bootloader, and the first thing
 	 * to run in non-secure world, we need to reset the UFS
 	 * controller via the SMC to acknowledge the switch.
 	 */
-	mtk_ufs_bootloader_smc_reset();
+	ufs_mtk_bootloader_smc_reset();
+#endif
 
 	ret = ufs_mtk_unipro_set_lpm(hba, false);
 	if (ret)
@@ -354,6 +358,7 @@ static int ufs_mtk_init(struct ufs_hba *hba)
 
 static int ufs_mtk_device_reset(struct ufs_hba *hba)
 {
+#if defined(CONFIG_UFS_MEDIATEK_NON_EL3)
 	struct arm_smccc_res res;
 
 	ufs_mtk_device_reset_ctrl(0, res);
@@ -371,8 +376,20 @@ static int ufs_mtk_device_reset(struct ufs_hba *hba)
 
 	/* Some devices may need time to respond to rst_n */
 	mdelay(13);
+#else
+	struct ufs_mtk_host *priv = dev_get_priv(hba->dev);
 
-	dev_dbg(hba->dev, "device reset done\n");
+	reset_assert(priv->hci_reset);
+	reset_assert(priv->crypto_reset);
+	reset_assert(priv->unipro_reset);
+
+	udelay(100);
+
+	reset_deassert(priv->hci_reset);
+	reset_deassert(priv->crypto_reset);
+	reset_deassert(priv->unipro_reset);
+	mdelay(10);
+#endif
 
 	return 0;
 }
