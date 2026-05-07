@@ -340,6 +340,8 @@ static int ufs_mtk_init(struct ufs_hba *hba)
 
 	ufs_mtk_init_reset(hba);
 
+	/*
+
 	err = clk_get_bulk(hba->dev, &priv->clks);
 	if (err) {
 		dev_err(hba->dev, "failed to initialize clocks, err:%d\n", err);
@@ -351,6 +353,8 @@ static int ufs_mtk_init(struct ufs_hba *hba)
 		dev_err(hba->dev, "failed to enable clocks, err:%d\n", err);
 		goto err_clk_enable;
 	}
+
+	*/
 
 	err = generic_phy_power_on(&priv->mphy);
 	if (err) {
