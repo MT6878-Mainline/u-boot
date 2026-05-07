@@ -10,6 +10,10 @@ config PINCTRL_MT6878
 	bool "MT6878 SoC pinctrl driver"
 	select PINCTRL_MTK
 
+config PINCTRL_MT6897
+	bool "MT6897 SoC pinctrl driver"
+	select PINCTRL_MTK
+
 config PINCTRL_MT7622
 	bool "MT7622 SoC pinctrl driver"
 	select PINCTRL_MTK
