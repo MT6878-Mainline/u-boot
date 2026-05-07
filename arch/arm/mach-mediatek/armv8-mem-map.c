@@ -21,4 +21,4 @@ static struct mm_region mediatek_mem_map[] = {
 	}
 };
 
-struct mm_region *mem_map = mediatek_mem_map;
+//struct mm_region *mem_map = mediatek_mem_map;

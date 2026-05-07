@@ -16,6 +16,7 @@ config TARGET_MT6878
 	select REGMAP
 	select SYSCON
 	select MTK_SMC_JUMP
+	select TARGET_MEDIATEK_MOBILE
 	help
 	  The MediaTek MT6878 is a ARM64-based SoC with 4x Cortex-A78 and
 	  4x Cortex-A55 including UART, SPI, USB, SD/MMC cards, UFS 3.1,
@@ -28,6 +29,7 @@ config TARGET_MT6897
 	select REGMAP
 	select SYSCON
 	select MTK_SMC_JUMP
+	select TARGET_MEDIATEK_MOBILE
 	help
 	  The MediaTek MT6897 TODO.
 

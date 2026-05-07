@@ -1,0 +1,15 @@
+if TARGET_MEDIATEK_MOBILE
+
+config ENV_SOURCE_FILE
+	default "mediatek-mobile"
+
+config SYS_BOARD
+	default "mediatek-mobile"
+
+config SYS_CONFIG_NAME
+	default "mediatek-mobile"
+
+config SYS_VENDOR
+	default "MediaTek"
+
+endif # TARGET_MEDIATEK_MOBILE
