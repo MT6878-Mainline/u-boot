@@ -126,7 +126,7 @@ static int do_ufetch(struct cmd_tbl *cmdtp, int flag, int argc,
 			printf("Kernel:" RESET " %s\n", U_BOOT_VERSION);
 			break;
 		case SYSINFO:
-			printf("Config:" RESET " %s_defconfig\n", CONFIG_SYS_CONFIG_NAME);
+			printf("Config:" RESET " %s_defconfig\n", "null");
 			break;
 		case HOST:
 			model = ofnode_read_string(ofnode_root(), "model");
