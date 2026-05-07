@@ -39,6 +39,19 @@ config BUTTON_GPIO
 	  The GPIO driver must used driver model. Buttons are configured using
 	  the device tree.
 
+config BUTTON_MTK_KP
+	bool "MediaTek Keypad buttons"
+	depends on BUTTON
+	help
+	  HACK HACK HACK. This just needs a rewrite.
+
+config BUTTON_MTK_PMIC
+	bool "MediaTek MT6363 buttons"
+	depends on BUTTON
+	help
+	  HACK HACK HACK. Enable "raw" access to buttons over spmi. This will conflict
+	  once we get a real spmi driver :sob:
+
 config BUTTON_QCOM_PMIC
 	bool "Qualcomm power button"
 	depends on BUTTON

@@ -41,6 +41,31 @@
 		device_type = "memory";
 		reg = <0x0 0x40000000 0x2 0x0>;
 	};
+
+	// This is NASTY and should not be like this.
+	mt6363_keys: mt6363-keys {
+		compatible = "mediatek,mt6363-buttons-raw";
+
+		volup-key {
+			label = "Volume Up";
+			linux,code = <KEY_VOLUMEUP>;
+		};
+
+		power-key {
+			label = "Power";
+			linux,code = <KEY_POWER>;
+		};
+	};
+
+	// This too.
+	kp_keys: kp-keys {
+		compatible = "mediatek,kp-raw";
+
+		voldown-key {
+			label = "Volume Down";
+			linux,code = <KEY_VOLUMEDOWN>;
+		};
+	};
 };
 
 &u2port {

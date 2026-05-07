@@ -205,6 +205,36 @@
 			};
 		};
 
+		pio: pinctrl {
+			compatible = "mediatek,mt6897-pinctrl";
+			reg = <0 0x10005000 0 0x1000>,
+			      <0 0x11b20000 0 0x1000>,
+			      <0 0x11c00000 0 0x1000>,
+			      <0 0x11d30000 0 0x1000>,
+			      <0 0x11d40000 0 0x1000>,
+			      <0 0x11d50000 0 0x1000>,
+			      <0 0x11ea0000 0 0x1000>,
+			      <0 0x11eb0000 0 0x1000>,
+			      <0 0x11f20000 0 0x1000>,
+			      <0 0x11f30000 0 0x1000>;
+			reg-names = "gpio",
+				    "iocfg_rt",
+				    "iocfg_rm",
+				    "iocfg_bl",
+				    "iocfg_bm",
+				    "iocfg_br",
+				    "iocfg_lb",
+				    "iocfg_lt",
+				    "iocfg_tm",
+				    "iocfg_tl";
+			gpio-controller;
+			#gpio-cells = <2>;
+			gpio-ranges = <&pio 0 0 232>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
+			interrupts = <GIC_SPI 309 IRQ_TYPE_LEVEL_HIGH 0>;
+		};
+
 		mtu3: usb0@11201000 {
 			compatible = "mediatek,mtu3";
 			reg = <0x11201000 0x2e00>,
@@ -343,7 +373,6 @@
 			status = "disabled";
 		};
 
-
 		ufscfg_ao: syscon@112b8000 {
 			compatible = "mediatek,mt6878-ufscfg-ao", "syscon";
 			reg = <0x112b8000 0x1000>;
@@ -375,6 +404,12 @@
 				>;
 			};
 		};
+
+		//spmi: spmi@1cc04000 {
+		//	compatible = "mediatek,mt6897-spmi";
+		//	reg = <0x1cc04000 0x8ff>;
+		//	reg-names = "pmif";
+		//};
 	};
 
 	timer: timer {
