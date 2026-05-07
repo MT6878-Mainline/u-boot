@@ -1,0 +1,60 @@
+// SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
+/*
+ * Lenovo Idea Tab Pro device tree source
+ *
+ * Copyright (c) 2026, Igor Belwon <igor.belwon@mentallysanemainliners.org>
+ */
+
+/dts-v1/;
+#include "mt6897.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+
+/ {
+	model = "Lenovo Idea Tab Pro";
+	chassis-type = "handset";
+	compatible = "lenovo,tb373fu", "mediatek,mt6897";
+
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	aliases {
+		//serial0 = &uart0;
+	};
+
+	chosen {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		simplefb@fe0d0000 {
+			compatible = "simple-framebuffer";
+			reg = <0x0 0xfc16f000 0x0 0x3e90000>;
+			width = <2944>;
+			height = <1840>;
+			stride = <(2944 * 4)>;
+			format = "a8r8g8b8";
+		};
+	};
+
+	memory {
+		device_type = "memory";
+		reg = <0x0 0x40000000 0x2 0x0>;
+	};
+};
+
+&u2port {
+	status = "okay";
+};
+
+&usbphy {
+	status = "okay";
+};
+
+&ufshci {
+	status = "okay";
+};
+
+&ufsphy {
+	status = "okay";
+};
