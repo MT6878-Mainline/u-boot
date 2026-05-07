@@ -81,10 +81,33 @@ static int ufs_mtk_unipro_set_lpm(struct ufs_hba *hba, bool lpm)
 	return ret;
 }
 
+void mtk_ufs_bootloader_smc_reset(void)
+{
+	struct arm_smccc_res smccc_res;
+	printf("Resetting UFS Controller (To Secure Reset mode)!\n");
+
+	memset(&smccc_res, 0, sizeof(smccc_res));
+
+	arm_smccc_smc(MTK_SIP_BL_UFS_CONTROL, (1 << 1),
+				  0, 0, 0, 0, 0, 0, &smccc_res);
+
+	udelay(10);
+
+	arm_smccc_smc(MTK_SIP_BL_UFS_CONTROL, (1 << 1),
+				  1, 0, 0, 0, 0, 0, &smccc_res);
+}
+
 static int ufs_mtk_pre_link(struct ufs_hba *hba)
 {
 	int ret;
 	u32 tmp;
+
+	/*
+	 * As we are the primary bootloader, and the first thing
+	 * to run in non-secure world, we need to reset the UFS
+	 * controller via the SMC to acknowledge the switch.
+	 */
+	mtk_ufs_bootloader_smc_reset();
 
 	ret = ufs_mtk_unipro_set_lpm(hba, false);
 	if (ret)
@@ -395,6 +418,7 @@ static int ufs_mtk_probe(struct udevice *dev)
 
 static const struct udevice_id ufs_mtk_ids[] = {
 	{ .compatible = "mediatek,mt6878-ufshci" },
+	{ .compatible = "mediatek,mt6897-ufshci" },
 	{ .compatible = "mediatek,mt8183-ufshci" },
 	{ .compatible = "mediatek,mt8195-ufshci" },
 	{ }
