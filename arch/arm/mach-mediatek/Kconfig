@@ -201,7 +201,6 @@ endif
 
 config SYS_BOARD
 	string "Board name"
-	default "mt6878" if TARGET_MT6878
 	default "mt7622" if TARGET_MT7622
 	default "mt7623" if TARGET_MT7623
 	default "mt7629" if TARGET_MT7629
