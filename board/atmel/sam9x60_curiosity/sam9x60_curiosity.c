@@ -51,11 +51,6 @@ void board_debug_uart_init(void)
 }
 #endif
 
-int board_early_init_f(void)
-{
-	return 0;
-}
-
 #define MAC24AA_MAC_OFFSET     0xfa
 
 #ifdef CONFIG_MISC_INIT_R
@@ -71,7 +66,7 @@ int misc_init_r(void)
 int board_init(void)
 {
 	/* address of boot parameters */
-	gd->bd->bi_boot_params = gd->bd->bi_dram[0].start + 0x100;
+	gd->bd->bi_boot_params = gd->dram[0].start + 0x100;
 
 	board_leds_init();
 

@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0+
 
 VERSION = 2026
-PATCHLEVEL = 07
+PATCHLEVEL = 10
 SUBLEVEL =
-EXTRAVERSION = -rc1
+EXTRAVERSION = -rc3
 NAME =
 
 # *DOCUMENTATION*
@@ -829,6 +829,21 @@ autoconf_is_old := $(shell find . -path ./$(KCONFIG_CONFIG) -newer \
 						include/config/auto.conf)
 ifeq ($(autoconf_is_old),)
 include $(srctree)/config.mk
+
+ifeq ($(CONFIG_OF_UPSTREAM),y)
+ifeq ($(CONFIG_CPU_V8M),y)
+dt_dir := dts/upstream/src/arm64
+else
+ifeq ($(CONFIG_ARM64),y)
+dt_dir := dts/upstream/src/arm64
+else
+dt_dir := dts/upstream/src/$(ARCH)
+endif
+endif
+else
+dt_dir := arch/$(ARCH)/dts
+endif
+
 include $(srctree)/arch/$(ARCH)/Makefile
 endif
 endif
@@ -920,7 +935,7 @@ endif
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
 KBUILD_CFLAGS	+= -Os
 else ifdef CONFIG_CC_OPTIMIZE_FOR_DEBUG
--KBUILD_CFLAGS  += -Og
+KBUILD_CFLAGS  += -Og
 # Avoid false positives -Wmaybe-uninitialized
 # https://gcc.gnu.org/bugzilla/show_bug.cgi?id=78394
 KBUILD_CFLAGS  += -Wno-maybe-uninitialized
@@ -1445,20 +1460,6 @@ dt_binding_check: scripts_dtc
 quiet_cmd_copy = COPY    $@
       cmd_copy = cp $< $@
 
-ifeq ($(CONFIG_OF_UPSTREAM),y)
-ifeq ($(CONFIG_CPU_V8M),y)
-dt_dir := dts/upstream/src/arm64
-else
-ifeq ($(CONFIG_ARM64),y)
-dt_dir := dts/upstream/src/arm64
-else
-dt_dir := dts/upstream/src/$(ARCH)
-endif
-endif
-else
-dt_dir := arch/$(ARCH)/dts
-endif
-
 ifeq ($(CONFIG_MULTI_DTB_FIT),y)
 
 ifeq ($(CONFIG_MULTI_DTB_FIT_LZO),y)
@@ -1475,7 +1476,8 @@ fit-dtb.blob.gz: fit-dtb.blob
 fit-dtb.blob.lzo: fit-dtb.blob
 	@lzop -f9 $< > $@
 
-fit-dtb.blob: dts/dt.dtb FORCE
+of_list_srcs := $(patsubst %,$(dt_dir)/%.dts,$(subst ",,$(CONFIG_OF_LIST)))
+fit-dtb.blob: dts/dt.dtb $(of_list_srcs) FORCE
 	$(call if_changed,mkimage)
 ifneq ($(SOURCE_DATE_EPOCH),)
 	touch -d @$(SOURCE_DATE_EPOCH) fit-dtb.blob
@@ -1576,6 +1578,9 @@ spl/u-boot-spl.srec: spl/u-boot-spl FORCE
 	$(call if_changed,zobjcopy)
 
 %.scif: %.srec
+	$(Q)$(MAKE) $(build)=arch/arm/mach-renesas $@
+
+%.shdr: %.srec
 	$(Q)$(MAKE) $(build)=arch/arm/mach-renesas $@
 
 OBJCOPYFLAGS_u-boot-nodtb.bin := -O binary \
@@ -1682,9 +1687,10 @@ cmd_binman = $(srctree)/tools/binman/binman $(if $(BINMAN_DEBUG),-D) \
 		build -u -d $(binman_dtb) -O . -m \
 		--allow-missing --fake-ext-blobs \
 		$(if $(BINMAN_ALLOW_MISSING),--ignore-missing) \
-		-I . -I $(srctree) -I $(srctree)/board/$(BOARDDIR) \
+		-I . -I $(srctree)/board/$(BOARDDIR) -I $(srctree) \
 		$(foreach f,$(of_list_dirs),-I $(f)) -a of-list=$(of_list) \
 		$(foreach f,$(BINMAN_INDIRS),-I $(f)) \
+		$(if $(KEYDIR),-a keydir=$(KEYDIR)) \
 		-a atf-bl1-path=${BL1} \
 		-a atf-bl31-path=${BL31} \
 		-a tee-os-path=${TEE} \
@@ -1999,6 +2005,7 @@ u-boot-with-spl-pbl.bin: spl/u-boot-spl.pbl $(UBOOT_BINLOAD) FORCE
 quiet_cmd_u-boot-elf ?= LD      $@
 	cmd_u-boot-elf ?= $(LD) u-boot-elf.o -o $@ \
 	$(if $(CONFIG_SYS_BIG_ENDIAN),-EB,-EL) \
+	$(PLATFORM_ELFLDFLAGS) \
 	-T u-boot-elf.lds --defsym=$(CONFIG_PLATFORM_ELFENTRY)=$(CONFIG_TEXT_BASE) \
 	-Ttext=$(CONFIG_TEXT_BASE)
 u-boot.elf: u-boot.bin u-boot-elf.lds FORCE
@@ -2008,6 +2015,7 @@ u-boot.elf: u-boot.bin u-boot-elf.lds FORCE
 quiet_cmd_u-boot-spl-elf ?= LD      $@
 	cmd_u-boot-spl-elf ?= $(LD) spl/u-boot-spl-elf.o -o $@ \
 	$(if $(CONFIG_SYS_BIG_ENDIAN),-EB,-EL) \
+	$(PLATFORM_ELFLDFLAGS) \
 	-T u-boot-elf.lds --defsym=$(CONFIG_PLATFORM_ELFENTRY)=$(CONFIG_SPL_TEXT_BASE) \
 	-Ttext=$(CONFIG_SPL_TEXT_BASE)
 spl/u-boot-spl.elf: spl/u-boot-spl.bin u-boot-elf.lds
@@ -2541,7 +2549,7 @@ CLEAN_FILES  += $(MODVERDIR) \
 			$(filter-out include, $(shell ls -1 $d 2>/dev/null))))
 
 CLEAN_FILES += include/autoconf.mk* include/bmp_logo.h include/bmp_logo_data.h \
-	       include/config.h include/generated/env.* drivers/video/u_boot_logo.S \
+	       include/config.h include/generated/env.* drivers/video/u_boot_logo.bmp.S \
 	       tools/version.h u-boot* MLO* SPL System.map fit-dtb.blob* \
 	       u-boot-ivt.img.log u-boot-dtb.imx.log SPL.log u-boot.imx.log \
 	       lpc32xx-* bl31.c bl31.elf bl31_*.bin image.map tispl.bin* \
@@ -2608,6 +2616,7 @@ clean: $(clean-dirs)
 		\( -name '*.[aios]' -o -name '*.ko' -o -name '.*.cmd' \
 		-o -name '*.ko.*' -o -name '*.su' -o -name '*.pyc' \
 		-o -name '*.dtb' -o -name '*.dtbo' -o -name '*.dtb.S' -o -name '*.dt.yaml' \
+		-o -name '*.dtb.clean.dts' -o -name '*.dtb.full.dts' -o -name '*.dtb.diff' \
 		-o -name '*.dwo' -o -name '*.lst' \
 		-o -name '*.su' -o -name '*.mod' -o -name '*.usyms' \
 		-o -name '.*.d' -o -name '.*.tmp' -o -name '*.mod.c' \
@@ -2687,7 +2696,6 @@ pip pip_test pip_release: _pip
 
 _pip:
 	scripts/make_pip.sh u_boot_pylib ${PIP_ARGS}
-	scripts/make_pip.sh patman ${PIP_ARGS}
 	scripts/make_pip.sh buildman ${PIP_ARGS}
 	scripts/make_pip.sh dtoc ${PIP_ARGS}
 	scripts/make_pip.sh binman ${PIP_ARGS}

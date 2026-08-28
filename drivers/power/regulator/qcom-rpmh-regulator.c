@@ -5,6 +5,7 @@
 #define pr_fmt(fmt) "%s: " fmt, __func__
 
 #include <linux/err.h>
+#include <dm.h>
 #include <dm/device_compat.h>
 #include <dm/device.h>
 #include <dm/devres.h>
@@ -295,57 +296,6 @@ static int rpmh_regulator_vrm_get_value(struct udevice *rdev)
 	return vreg->uv;
 }
 
-static int rpmh_regulator_is_enabled(struct udevice *rdev)
-{
-	struct rpmh_vreg *vreg = dev_get_priv(rdev);
-	int ret;
-
-	debug("%s: is_enabled %d\n", rdev->name, vreg->enabled);
-
-	if (vreg->enabled < 0) {
-		struct tcs_cmd cmd = {
-			.addr = vreg->addr + RPMH_REGULATOR_REG_ENABLE,
-		};
-		ret = rpmh_regulator_read_data(vreg, &cmd);
-		/*
-		 * Don't override if disabled since we will also vote the right voltage
-		 * while enabling
-		 */
-		if (!ret && cmd.data)
-			vreg->enabled = cmd.data & RPMH_REGULATOR_ENABLE_MASK;
-	}
-
-	return vreg->enabled > 0;
-}
-
-static int rpmh_regulator_set_enable_state(struct udevice *rdev,
-					   bool enable)
-{
-	struct rpmh_vreg *vreg = dev_get_priv(rdev);
-	struct tcs_cmd cmd = {
-		.addr = vreg->addr + RPMH_REGULATOR_REG_ENABLE,
-		.data = enable,
-	};
-	int ret;
-
-	debug("%s: set_enable %d (current %d)\n", rdev->name, enable,
-	      vreg->enabled);
-
-	if (vreg->enabled == -EINVAL &&
-	    vreg->uv != -ENOTRECOVERABLE) {
-		ret = _rpmh_regulator_vrm_set_value(rdev,
-						    vreg->uv, true);
-		if (ret < 0)
-			return ret;
-	}
-
-	ret = rpmh_regulator_send_request(vreg, &cmd, enable);
-	if (!ret)
-		vreg->enabled = enable;
-
-	return ret;
-}
-
 static int rpmh_regulator_vrm_set_mode_bypass(struct rpmh_vreg *vreg,
 					      unsigned int mode, bool bypassed)
 {
@@ -392,6 +342,63 @@ static int rpmh_regulator_vrm_set_mode(struct udevice *rdev,
 	ret = rpmh_regulator_vrm_set_mode_bypass(vreg, mode, vreg->bypassed);
 	if (!ret)
 		vreg->mode = mode;
+
+	return ret;
+}
+
+static int rpmh_regulator_is_enabled(struct udevice *rdev)
+{
+	struct rpmh_vreg *vreg = dev_get_priv(rdev);
+	int ret;
+
+	debug("%s: is_enabled %d\n", rdev->name, vreg->enabled);
+
+	if (vreg->enabled < 0) {
+		struct tcs_cmd cmd = {
+			.addr = vreg->addr + RPMH_REGULATOR_REG_ENABLE,
+		};
+		ret = rpmh_regulator_read_data(vreg, &cmd);
+		/*
+		 * Don't override if disabled since we will also vote the right voltage
+		 * while enabling
+		 */
+		if (!ret && cmd.data)
+			vreg->enabled = cmd.data & RPMH_REGULATOR_ENABLE_MASK;
+	}
+
+	return vreg->enabled > 0;
+}
+
+static int rpmh_regulator_set_enable_state(struct udevice *rdev,
+					   bool enable)
+{
+	struct rpmh_vreg *vreg = dev_get_priv(rdev);
+	struct tcs_cmd cmd = {
+		.addr = vreg->addr + RPMH_REGULATOR_REG_ENABLE,
+		.data = enable,
+	};
+	int ret;
+
+	debug("%s: set_enable %d (current %d)\n", rdev->name, enable,
+	      vreg->enabled);
+
+	if (vreg->mode != -EINVAL) {
+		ret = rpmh_regulator_vrm_set_mode_bypass(vreg, vreg->mode, vreg->bypassed);
+		if (ret < 0)
+			return ret;
+	}
+
+	if (vreg->enabled == -EINVAL &&
+	    vreg->uv != -ENOTRECOVERABLE) {
+		ret = _rpmh_regulator_vrm_set_value(rdev,
+						    vreg->uv, true);
+		if (ret < 0)
+			return ret;
+	}
+
+	ret = rpmh_regulator_send_request(vreg, &cmd, enable);
+	if (!ret)
+		vreg->enabled = enable;
 
 	return ret;
 }
@@ -882,7 +889,7 @@ static int rpmh_regulator_probe(struct udevice *dev)
 	priv->hw_data = init_data->hw_data;
 	priv->enabled = -EINVAL;
 	priv->uv = -ENOTRECOVERABLE;
-	if (ofnode_read_u32(dev_ofnode(dev), "regulator-initial-mode", &priv->mode))
+	if (dev_read_u32(dev, "regulator-initial-mode", &priv->mode))
 		priv->mode = -EINVAL;
 
 	plat_data->mode = priv->hw_data->pmic_mode_map;
@@ -933,7 +940,7 @@ static int rpmh_regulators_bind(struct udevice *dev)
 		return -ENODEV;
 	}
 
-	pmic_id = ofnode_read_string(dev_ofnode(dev), "qcom,pmic-id");
+	pmic_id = dev_read_string(dev, "qcom,pmic-id");
 	if (!pmic_id) {
 		dev_err(dev, "No PMIC ID\n");
 		return -ENODEV;
@@ -941,7 +948,7 @@ static int rpmh_regulators_bind(struct udevice *dev)
 
 	drv = lists_driver_lookup_name("rpmh_regulator_drm");
 
-	ofnode_for_each_subnode(node, dev_ofnode(dev)) {
+	dev_for_each_subnode(node, dev) {
 		data = vreg_get_init_data(init_data, node);
 		if (!data)
 			continue;

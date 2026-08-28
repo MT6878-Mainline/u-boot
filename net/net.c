@@ -1076,6 +1076,8 @@ static struct ip_udp_hdr *__net_defragment(struct ip_udp_hdr *ip, int *lenp)
 	} else if (h >= thisfrag) {
 		/* overlaps with initial part of the hole: move this hole */
 		newh = thisfrag + (len / 8);
+		if ((uchar *)(newh + 1) > pkt_buff + IP_PKTSIZE)
+			return NULL;	/* hole descriptor would overflow pkt_buff */
 		*newh = *h;
 		h = newh;
 		if (h->next_hole)
@@ -1088,6 +1090,8 @@ static struct ip_udp_hdr *__net_defragment(struct ip_udp_hdr *ip, int *lenp)
 	} else {
 		/* fragment sits in the middle: split the hole */
 		newh = thisfrag + (len / 8);
+		if ((uchar *)(newh + 1) > pkt_buff + IP_PKTSIZE)
+			return NULL;	/* hole descriptor would overflow pkt_buff */
 		*newh = *h;
 		h->last_byte = start;
 		h->next_hole = (newh - payload);
@@ -1103,6 +1107,15 @@ static struct ip_udp_hdr *__net_defragment(struct ip_udp_hdr *ip, int *lenp)
 
 	*lenp = total_len + IP_HDR_SIZE;
 	localip->ip_len = htons(*lenp);
+
+	/*
+	 * Mark the reassembly state empty so that any further
+	 * fragment goes through the normal re-init path and
+	 * rebuilds a clean hole list
+	 */
+	total_len = 0;
+	first_hole = 0;
+
 	return localip;
 }
 

@@ -344,7 +344,6 @@ static int qcom_gpio_probe(struct udevice *dev)
 static const struct udevice_id qcom_gpio_ids[] = {
 	{ .compatible = "qcom,pm8916-gpio" },
 	{ .compatible = "qcom,pm8994-gpio" },	/* 22 GPIO's */
-	{ .compatible = "qcom,pm8998-gpio" },
 	{ .compatible = "qcom,pms405-gpio" },
 	{ .compatible = "qcom,pm6125-gpio" },
 	{ .compatible = "qcom,pm8150-gpio" },
@@ -410,7 +409,7 @@ static int qcom_pmic_pinctrl_generic_pinmux_set_mux(struct udevice *dev, unsigne
 	return 0;
 }
 
-struct pinctrl_ops qcom_pmic_pinctrl_ops = {
+static const struct pinctrl_ops qcom_pmic_pinctrl_ops = {
 	.get_pins_count = qcom_pmic_pinctrl_get_pins_count,
 	.get_pin_name = qcom_pmic_pinctrl_get_pin_name,
 	.set_state = pinctrl_generic_set_state,

@@ -36,7 +36,7 @@ stages:
   before_script:
     # Clone uboot-test-hooks
     - git config --global --add safe.directory "${CI_PROJECT_DIR}"
-    - git clone --depth=1 https://source.denx.de/u-boot/u-boot-test-hooks /tmp/uboot-test-hooks
+    - git clone --depth=1 https://git.u-boot-project.org/u-boot/u-boot-test-hooks /tmp/uboot-test-hooks
     # qemu_arm64_lwip_defconfig is the same as qemu_arm64 but with NET_LWIP enabled.
     # The test config and the boardenv file from qemu_arm64 can be re-used so create symlinks
     - ln -s conf.qemu_arm64 /tmp/uboot-test-hooks/bin/travis-ci/conf.qemu_arm64_lwip_na
@@ -206,7 +206,7 @@ Build allyesconfig, tools-only and envtools:
       make mrproper;
       make tools-only_config envtools -j$(nproc)
 
-Run binman, buildman, dtoc, Kconfig and patman testsuites:
+Run binman, buildman, dtoc and Kconfig testsuites:
   extends: .testsuites
   tags:
     - ${DEFAULT_AMD64_TAG}
@@ -218,8 +218,9 @@ Run binman, buildman, dtoc, Kconfig and patman testsuites:
       python3 -m venv /tmp/venv;
       . /tmp/venv/bin/activate;
       pip install -r test/py/requirements.txt -r tools/binman/requirements.txt
-        -r tools/buildman/requirements.txt -r tools/patman/requirements.txt
-        -r tools/u_boot_pylib/requirements.txt;
+        -r tools/buildman/requirements.txt
+        -r tools/u_boot_pylib/requirements.txt
+        -r scripts/dtc/pylibfdt/requirements.txt;
       export UBOOT_TRAVIS_BUILD_DIR=/tmp/tools-only;
       export PYTHONPATH="${UBOOT_TRAVIS_BUILD_DIR}/scripts/dtc/pylibfdt";
       export PATH="${UBOOT_TRAVIS_BUILD_DIR}/scripts/dtc:${PATH}";
@@ -233,7 +234,6 @@ Run binman, buildman, dtoc, Kconfig and patman testsuites:
       ./tools/binman/binman ${TOOLPATH} test -T;
       ./tools/buildman/buildman -t;
       ./tools/dtoc/dtoc -t;
-      ./tools/patman/patman test;
       make testconfig
 
 # Check for any pylint regressions
@@ -244,8 +244,9 @@ Run pylint:
     - python3 -m venv /tmp/venv
     - . /tmp/venv/bin/activate
     - pip install -r test/py/requirements.txt -r tools/binman/requirements.txt
-        -r tools/buildman/requirements.txt -r tools/patman/requirements.txt
-        -r tools/u_boot_pylib/requirements.txt asteval pylint==3.3.4 pyopenssl
+        -r tools/buildman/requirements.txt
+        -r tools/u_boot_pylib/requirements.txt
+        -r scripts/dtc/pylibfdt/requirements.txt asteval pylint==3.3.4 pyopenssl
     - export PATH=${PATH}:~/.local/bin
     - echo "[MASTER]" >> .pylintrc
     - echo "load-plugins=pylint.extensions.docparams" >> .pylintrc

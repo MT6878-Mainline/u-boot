@@ -242,13 +242,17 @@ int init_func_vid(void)
 
 	return 0;
 }
-#endif
 EVENT_SPY_SIMPLE(EVT_MISC_INIT_F, init_func_vid);
+#endif
 
 int checkboard(void)
 {
-	enum boot_src src = get_boot_src();
 	char buf[64];
+
+	cpu_name(buf);
+
+#if IS_ENABLED(CONFIG_FSL_QIXIS)
+	enum boot_src src = get_boot_src();
 	u8 sw;
 #if defined(CONFIG_TARGET_LX2160AQDS) || defined(CONFIG_TARGET_LX2162AQDS)
 	int clock;
@@ -258,7 +262,6 @@ int checkboard(void)
 					   "100 separate SSCG"};
 #endif
 
-	cpu_name(buf);
 #if defined(CONFIG_TARGET_LX2160AQDS) || defined(CONFIG_TARGET_LX2162AQDS)
 	printf("Board: %s-QDS, ", buf);
 #else
@@ -325,7 +328,10 @@ int checkboard(void)
 	clock = sw >> 4;
 	printf("Clock1 = %sMHz Clock2 = %sMHz\n", freq[clock], freq[clock]);
 #endif
-#endif
+#endif /* LX2160ARDB-inside-QIXIS switch */
+#else /* !CONFIG_FSL_QIXIS */
+	printf("Board: %s\n", buf);
+#endif /* CONFIG_FSL_QIXIS */
 	return 0;
 }
 
@@ -554,7 +560,7 @@ int board_init(void)
 	out_le32(irq_ccsr + IRQCR_OFFSET / 4, AQR107_IRQ_MASK);
 #endif
 
-#if !defined(CONFIG_SYS_EARLY_PCI_INIT)
+#if defined(CONFIG_PCI) && !defined(CONFIG_SYS_EARLY_PCI_INIT)
 	pci_init();
 #endif
 	return 0;
@@ -567,7 +573,7 @@ void detail_board_ddr_info(void)
 
 	puts("\nDDR    ");
 	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++)
-		ddr_size += gd->bd->bi_dram[i].size;
+		ddr_size += gd->dram[i].size;
 	print_size(ddr_size, "");
 	print_ddr_info(0);
 }
@@ -788,7 +794,9 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 
 	ft_cpu_setup(blob, bd);
 
+#if IS_ENABLED(CONFIG_FSL_MC_ENET)
 	fdt_fixup_mc_ddr(&mc_memory_base, &mc_memory_size);
+#endif
 
 	if (mc_memory_base != 0)
 		mc_memory_bank++;
@@ -800,8 +808,8 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 
 	/* fixup DT for the three GPP DDR banks */
 	for (i = 0; i < CONFIG_NR_DRAM_BANKS; i++) {
-		base[i] = gd->bd->bi_dram[i].start;
-		size[i] = gd->bd->bi_dram[i].size;
+		base[i] = gd->dram[i].start;
+		size[i] = gd->dram[i].size;
 	}
 
 #ifdef CONFIG_RESV_RAM
@@ -818,7 +826,7 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 #endif
 
 	if (mc_memory_base != 0) {
-		for (i = 0; i <= total_memory_banks; i++) {
+		for (i = 0; i < total_memory_banks; i++) {
 			if (base[i] == 0 && size[i] == 0) {
 				base[i] = mc_memory_base;
 				size[i] = mc_memory_size;

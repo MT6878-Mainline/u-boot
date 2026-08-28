@@ -7212,6 +7212,11 @@ fdt         fdtmap                Extract the devicetree blob from the fdtmap
         configlen_noheader = TI_BOARD_CONFIG_DATA * 4
         self.assertGreater(data, configlen_noheader)
 
+    def testTIBoardConfigCombinedSwRev(self):
+        """Test that sw-rev property is honoured in combined board config"""
+        data = self._DoReadFile('vendor/ti_board_cfg_combined_sw_rev.dts')
+        self.assertEqual(2, data[1])
+
     def testTIBoardConfigNoDataType(self):
         """Test that error is thrown when data type is not supported"""
         with self.assertRaises(ValueError) as e:
@@ -7581,7 +7586,7 @@ fdt         fdtmap                Extract the devicetree blob from the fdtmap
         self._CheckBintool(p11_kit)
 
         p11_kit_config = configparser.ConfigParser()
-        out = tools.run('p11-kit', 'print-config')
+        out = p11_kit.run_cmd('print-config')
         p11_kit_config.read_string(out)
         softhsm2_lib = p11_kit_config.get('softhsm2', 'module',
                                            fallback=None)
@@ -7590,16 +7595,16 @@ fdt         fdtmap                Extract the devicetree blob from the fdtmap
         with unittest.mock.patch.dict('os.environ',
                                       {'SOFTHSM2_CONF': softhsm2_conf,
                                        'PKCS11_MODULE_PATH': softhsm2_lib}):
-                tools.run('softhsm2-util', '--init-token', '--free', '--label',
-                          'U-Boot token', '--pin', '1111', '--so-pin',
-                          '222222')
-                tools.run('pkcs11-tool', '--module', softhsm2_lib,
-                          '--write-object', cert_file, '--pin', '1111',
-                          '--type', 'cert', '--id', '999999', '--label',
-                          'test_cert', '--login')
-                tools.run('softhsm2-util', '--import', private_key, '--token',
-                          'U-Boot token', '--label', 'test_key', '--id', '999999',
-                          '--pin', '1111')
+                softhsm2_util.run_cmd('--init-token', '--free', '--label',
+                                      'U-Boot token', '--pin', '1111',
+                                      '--so-pin', '222222')
+                pkcs11_tool.run_cmd('--module', softhsm2_lib,
+                                    '--write-object', cert_file, '--pin', '1111',
+                                    '--type', 'cert', '--id', '999999', '--label',
+                                    'test_cert', '--login')
+                softhsm2_util.run_cmd('--import', private_key, '--token',
+                                      'U-Boot token', '--label', 'test_key',
+                                      '--id', '999999', '--pin', '1111')
                 data = self._DoReadFile('capsule/signed_pkcs11.dts')
 
         self._CheckCapsule(data, signed_capsule=True)
@@ -8024,6 +8029,39 @@ fdt         fdtmap                Extract the devicetree blob from the fdtmap
         err = stderr.getvalue()
         self.assertRegex(err, "Image 'image'.*missing bintools.*: cst")
 
+    def testNxpImx8mCSTPKCS11(self):
+        """Test CST signing with IVT-format input (pkcs11 auth, no unlock)"""
+        # Create fake IVT blob: magic(4) + padding(20) + signsize_addr(4)
+        # + padding(36) = 64 bytes
+        ivt_data = struct.pack('<I', 0x412000d1)
+        ivt_data += b'\x00' * 20
+        ivt_data += struct.pack('<I', 0)
+        ivt_data += b'\x00' * 36
+        self._MakeInputFile('imx8m-ivt.bin', ivt_data)
+        with terminal.capture() as (_, stderr):
+            self._DoTestFile('vendor/nxp_imx8_csf_pkcs11.dts',
+                             force_missing_bintools='cst')
+        err = stderr.getvalue()
+        self.assertRegex(err, "Image 'image'.*missing bintools.*: cst")
+
+    def testNxpImx8mCSTFCFB(self):
+        """Test CST signing with FCFB-format input (normal auth, no unlock)"""
+        # Create fake FCFB blob: magic(4) + padding(4116)
+        ivt_data = struct.pack('<I', 0x42464346)
+        ivt_data += b'\x00' * 4116
+        # Create fake IVT blob: magic(4) + padding(20) + signsize_addr(4)
+        # + padding(36) = 64 bytes
+        ivt_data += struct.pack('<I', 0x412000d1)
+        ivt_data += b'\x00' * 20
+        ivt_data += struct.pack('<I', 0)
+        ivt_data += b'\x00' * 36
+        self._MakeInputFile('imx8m-ivt.bin', ivt_data)
+        with terminal.capture() as (_, stderr):
+            self._DoTestFile('vendor/nxp_imx8_csf.dts',
+                             force_missing_bintools='cst')
+        err = stderr.getvalue()
+        self.assertRegex(err, "Image 'image'.*missing bintools.*: cst")
+
     def testNxpImx8mCSTFastAuth(self):
         """Test CST signing with fast-auth mode, unlock, and FIT format"""
         # FIT magic covers the FIT-signing path; fast-auth/unlock cover the
@@ -8099,6 +8137,21 @@ fdt         fdtmap                Extract the devicetree blob from the fdtmap
             result = cst.fetch(bintool.FETCH_BUILD)
             self.assertEqual(('cst', None), result)
 
+    def testNxpImx8MFSPI(self):
+        """Test that binman can produce an iMX8m FSPI image"""
+        self._DoTestFile('vendor/nxp_imx8m_fspi.dts')
+        self._DoTestFile('vendor/nxp_imx8m_fspi_pass.dts')
+        with self.assertRaises(ValueError) as e:
+            self._DoTestFile('vendor/nxp_imx8m_fspi_fail_columnadresswidth.dts')
+        with self.assertRaises(ValueError) as e:
+            self._DoTestFile('vendor/nxp_imx8m_fspi_fail_devicetype.dts')
+        with self.assertRaises(ValueError) as e:
+            self._DoTestFile('vendor/nxp_imx8m_fspi_fail_flashpadtype.dts')
+        with self.assertRaises(ValueError) as e:
+            self._DoTestFile('vendor/nxp_imx8m_fspi_fail_readsampleclksrc.dts')
+        with self.assertRaises(ValueError) as e:
+            self._DoTestFile('vendor/nxp_imx8m_fspi_fail_serialclkfreq.dts')
+
     def testNxpHeaderDdrfw(self):
         """Test that binman can add a header to DDR PHY firmware images"""
         data = self._DoReadFile('vendor/nxp_ddrfw_imx95.dts')
@@ -8152,6 +8205,31 @@ fdt         fdtmap                Extract the devicetree blob from the fdtmap
             signature = subnode.FindNode('signature')
             self.assertIsNotNone(signature)
             self.assertIsNotNone(signature.props.get('value'))
+
+    def testFitSignKeydir(self):
+        """Test that the keydir EntryArg is passed to mkimage"""
+        if not elf.ELF_TOOLS:
+            self.skipTest('Python elftools not available')
+        data = tools.read_file(self.TestFile("fit/rsa2048.key"))
+        self._MakeInputFile("keys/rsa2048.key", data)
+
+        test_subdir = os.path.join(self._indir, TEST_FDT_SUBDIR)
+        keys_subdir = os.path.join(self._indir, "keys")
+        entry_args = {
+            'of-list': 'test-fdt1',
+            'default-dt': 'test-fdt1',
+            'atf-bl31-path': 'bl31.elf',
+            'keydir': keys_subdir,
+        }
+        data = self._DoReadFileDtb(
+            'fit/signature.dts',
+            entry_args=entry_args,
+            extra_indirs=[test_subdir])[0]
+
+        dtb = fdt.Fdt.FromData(data)
+        dtb.Scan()
+        signature = dtb.GetNode('/configurations/conf-uboot-1/signature')
+        self.assertIsNotNone(signature.props.get('value'))
 
     def testFitSignEngineSimple(self):
         """Test that image with FIT and signature nodes can be signed with an
@@ -8251,12 +8329,12 @@ fdt         fdtmap                Extract the devicetree blob from the fdtmap
 
         with unittest.mock.patch.dict('os.environ',
                                       {'SOFTHSM2_CONF': softhsm2_conf}):
-            tools.run('softhsm2-util', '--init-token', '--free', '--label',
-                      'U-Boot token', '--pin', '1111', '--so-pin',
-                      '222222')
-            tools.run('softhsm2-util', '--import', private_key, '--token',
-                      'U-Boot token', '--label', 'test_key', '--id', '999999',
-                      '--pin', '1111')
+            softhsm2_util.run_cmd('--init-token', '--free', '--label',
+                                  'U-Boot token', '--pin', '1111',
+                                  '--so-pin', '222222')
+            softhsm2_util.run_cmd('--import', private_key, '--token',
+                                  'U-Boot token', '--label', 'test_key',
+                                  '--id', '999999', '--pin', '1111')
 
         # Make sure the private key can only be accessed through the engine
         os.remove(private_key)
@@ -8326,12 +8404,12 @@ fdt         fdtmap                Extract the devicetree blob from the fdtmap
 
         with unittest.mock.patch.dict('os.environ',
                                       {'SOFTHSM2_CONF': softhsm2_conf}):
-            tools.run('softhsm2-util', '--init-token', '--free', '--label',
-                      'U-Boot prod token', '--pin', '1234', '--so-pin',
-                      '222222')
-            tools.run('softhsm2-util', '--import', private_key, '--token',
-                      'U-Boot prod token', '--label', 'prod', '--id', '999999',
-                      '--pin', '1234')
+            softhsm2_util.run_cmd('--init-token', '--free', '--label',
+                                  'U-Boot prod token', '--pin', '1234',
+                                  '--so-pin', '222222')
+            softhsm2_util.run_cmd('--import', private_key, '--token',
+                                  'U-Boot prod token', '--label', 'prod',
+                                  '--id', '999999', '--pin', '1234')
 
         # Make sure the private key can only be accessed through the engine
         os.remove(private_key)
@@ -8492,6 +8570,21 @@ fdt         fdtmap                Extract the devicetree blob from the fdtmap
         with open(data_file, 'r') as file:
             dec_data = file.read()
         self.assertEqual(U_BOOT_NODTB_DATA, dec_data.encode('ascii'))
+
+    def testSimpleFitEncryptedDataKeydir(self):
+        """Test that encrypted FIT data uses the keydir EntryArg"""
+        data = tools.read_file(self.TestFile("fit/aes256.bin"))
+        self._MakeInputFile("keys/aes256.bin", data)
+
+        keys_subdir = os.path.join(self._indir, "keys")
+        data = self._DoReadFileDtb(
+            'fit/encrypt_data.dts',
+            entry_args={'keydir': keys_subdir})[0]
+
+        fit = fdt.Fdt.FromData(data)
+        fit.Scan()
+        node = fit.GetNode('/images/u-boot')
+        self.assertIn('data-size-unciphered', fit.GetProps(node))
 
     def testSimpleFitEncryptedDataMissingKey(self):
         """Test an image with a FIT containing data to be encrypted but with a missing key"""

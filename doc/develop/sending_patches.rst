@@ -5,7 +5,7 @@ Sending patches
 
 *Before you begin* to implement any new ideas or concepts it is always a good
 idea to present your plans on the `U-Boot mailing list
-<https://lists.denx.de/listinfo/u-boot>`_. U-Boot supports a huge amount of
+<https://lists.u-boot-project.org/listinfo/u-boot>`_. U-Boot supports a huge amount of
 very different systems, and it is often impossible for the individual developer
 to oversee the consequences of a specific change to all architectures.
 Discussing concepts early can help you to avoid spending effort on code which,
@@ -17,20 +17,77 @@ A good introduction how to prepare for submitting patches can be found in the
 LWN article `How to Get Your Change Into the Linux Kernel
 <http://lwn.net/Articles/139918/>`_ as the same rules apply to U-Boot, too.
 
+.. _b4_contrib:
+
+Using b4
+--------
+
+Use the `b4 <https://b4.docs.kernel.org/en/latest/>`__ tool to prepare and send
+your patches. b4 has become the preferred tool to sending patches for many Linux
+kernel contributors, and U-Boot ships with a ready-to-use ``.b4-config`` that
+targets ``u-boot@lists.u-boot-project.org`` and integrates with ``scripts/get_maintainer.pl``
+for recipient discovery.
+
+Start a topical series with ``b4 prep`` and keep the commits organised with
+``git rebase -i``. ``b4 prep --edit-cover`` opens an editor for the cover letter,
+while ``b4 prep --auto-to-cc`` collects reviewers and maintainers from both the
+configuration file and ``scripts/get_maintainer.pl``.
+
+.. code-block:: bash
+
+   b4 prep -n mmc-fixes
+   git rebase -i origin/master
+   b4 prep --edit-cover
+   b4 prep --auto-to-cc
+
+Run the style checks before sending. ``b4 prep --check`` wraps the existing
+tooling so you see the output from ``scripts/checkpatch.pl`` alongside b4's own
+validation. You can always invoke ``scripts/checkpatch.pl`` directly for
+additional runs.
+
+.. code-block:: bash
+
+   b4 prep --check
+
+When the series is ready, use ``b4 send``. Begin with ``--dry-run`` to review the
+generated emails and ``--reflect`` to copy yourself for records before
+dispatching to ``u-boot@lists.u-boot-project.org``.
+
+.. code-block:: bash
+
+   b4 send --dry-run
+   b4 send --reflect
+   b4 send
+
+After reviews arrive, collect Acked-by/Tested-by tags with ``b4 trailers -u`` and
+fold them into your commits before resending the updated series.
+
+.. code-block:: bash
+
+   b4 trailers -u
+   git rebase -i origin/master
+   b4 send
+
 Using patman
 ------------
 
 You can use a tool called patman to prepare, check and send patches. It creates
 change logs, cover letters and patch notes. It also simplifies the process of
-sending multiple versions of a series.
+sending multiple versions of a series. patman is driven by tags in your commit
+messages, and can collect Reviewed-by and other tags from patchwork when you
+send a new version. It can optionally keep a local database of all your series,
+tracking each version and their review / applied status over time, so you can
+easily track upstreaming progress.
 
-See more details at :doc:`patman`.
+patman now lives outside the U-Boot tree; install it with
+``pip install patch-manager``. See the
+`patman documentation <https://deinde.dev/patman>`_ for details.
 
 General Patch Submission Rules
 ------------------------------
 
-* All patches must be sent to the `u-boot@lists.denx.de
-  <https://lists.denx.de/listinfo/u-boot>`_ mailing list.
+* All patches must be sent to the `u-boot@lists.u-boot-project.org
+  <https://lists.u-boot-project.org/listinfo/u-boot>`_ mailing list.
 
 * If your patch affects the code maintained by one of the :ref:`custodians`, CC
   them when emailing your patch. The easiest way to make sure you don't forget
@@ -77,7 +134,7 @@ General Patch Submission Rules
   patches is by using the ``git format-patch`` command. For a patch that is
   fixing a bug or regression of some sort, please use the ``master`` branch of
   the mainline U-Boot git repository located at
-  https://source.denx.de/u-boot/u-boot.git as reference. For new features, if
+  https://git.u-boot-project.org/u-boot/u-boot.git as reference. For new features, if
   the ``next`` branch has been opened (which happens with the release of
   ``-rc2``) that branch should be used, otherwise ``master`` is acceptable.
 
@@ -88,7 +145,7 @@ General Patch Submission Rules
   If you believe you need to use a mailing list for testing (instead of any
   regular mail address you own), we have a special test list for such purposes.
   It would be best to subscribe to the list for the duration of your tests to
-  avoid repeated moderation - see https://lists.denx.de/listinfo/test
+  avoid repeated moderation - see https://lists.u-boot-project.org/listinfo/test
 
 * Choose a meaningful Subject: - keep in mind that the Subject will also be
   visible as headline of your commit message. Make sure the subject does not

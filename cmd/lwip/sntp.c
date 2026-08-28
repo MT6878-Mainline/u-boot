@@ -71,6 +71,7 @@ static int sntp_loop(struct udevice *udev, ip_addr_t *srvip)
 	} else {
 		if (!ntp_server_known()) {
 			log_err("error: ntpserverip not set\n");
+			net_lwip_remove_netif(netif);
 			return -1;
 		}
 	}
@@ -101,6 +102,7 @@ int do_sntp(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 	ip_addr_t *srvip;
 	char *server;
 	ip_addr_t ipaddr;
+	int ret = CMD_RET_FAILURE;
 
 	switch (argc) {
 	case 1:
@@ -127,7 +129,12 @@ int do_sntp(struct cmd_tbl *cmdtp, int flag, int argc, char *const argv[])
 		return CMD_RET_FAILURE;
 
 	if (sntp_loop(eth_get_dev(), srvip) < 0)
-		return CMD_RET_FAILURE;
+		goto out;
 
-	return CMD_RET_SUCCESS;
+	ret = CMD_RET_SUCCESS;
+
+out:
+	net_lwip_eth_stop();
+
+	return ret;
 }

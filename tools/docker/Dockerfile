@@ -358,19 +358,17 @@ USER uboot:uboot
 
 # Populate the cache for pip to use. Get these via wget as the
 # COPY / ADD directives don't work as we need them to.
-RUN wget -O /tmp/pytest-requirements.txt https://source.denx.de/u-boot/u-boot/-/raw/master/test/py/requirements.txt
-RUN wget -O /tmp/sphinx-requirements.txt https://source.denx.de/u-boot/u-boot/-/raw/master/doc/sphinx/requirements.txt
-RUN wget -O /tmp/binman-requirements.txt https://source.denx.de/u-boot/u-boot/-/raw/master/tools/binman/requirements.txt
-RUN wget -O /tmp/buildman-requirements.txt https://source.denx.de/u-boot/u-boot/-/raw/master/tools/buildman/requirements.txt
-RUN wget -O /tmp/patman-requirements.txt https://source.denx.de/u-boot/u-boot/-/raw/master/tools/patman/requirements.txt
-RUN wget -O /tmp/u_boot_pylib-requirements.txt https://source.denx.de/u-boot/u-boot/-/raw/master/tools/u_boot_pylib/requirements.txt
+RUN wget -O /tmp/pytest-requirements.txt https://git.u-boot-project.org/u-boot/u-boot/-/raw/master/test/py/requirements.txt
+RUN wget -O /tmp/sphinx-requirements.txt https://git.u-boot-project.org/u-boot/u-boot/-/raw/master/doc/sphinx/requirements.txt
+RUN wget -O /tmp/binman-requirements.txt https://git.u-boot-project.org/u-boot/u-boot/-/raw/master/tools/binman/requirements.txt
+RUN wget -O /tmp/buildman-requirements.txt https://git.u-boot-project.org/u-boot/u-boot/-/raw/master/tools/buildman/requirements.txt
+RUN wget -O /tmp/u_boot_pylib-requirements.txt https://git.u-boot-project.org/u-boot/u-boot/-/raw/master/tools/u_boot_pylib/requirements.txt
 RUN python3 -m venv /tmp/venv && \
 	. /tmp/venv/bin/activate && \
 	pip install -r /tmp/pytest-requirements.txt \
 		-r /tmp/sphinx-requirements.txt \
 		-r /tmp/binman-requirements.txt \
 		-r /tmp/buildman-requirements.txt \
-		-r /tmp/patman-requirements.txt \
 		-r /tmp/u_boot_pylib-requirements.txt \
 		setuptools pytest-azurepipelines && \
 	deactivate && \

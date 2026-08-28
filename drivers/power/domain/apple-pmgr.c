@@ -67,7 +67,7 @@ static int apple_reset_deassert(struct reset_ctl *reset_ctl)
 	return 0;
 }
 
-struct reset_ops apple_reset_ops = {
+static const struct reset_ops apple_reset_ops = {
 	.of_xlate = apple_reset_of_xlate,
 	.rst_assert = apple_reset_assert,
 	.rst_deassert = apple_reset_deassert,
@@ -110,6 +110,7 @@ static int apple_pmgr_of_xlate(struct power_domain *power_domain,
 }
 
 static const struct udevice_id apple_pmgr_ids[] = {
+	{ .compatible = "apple,t8103-pmgr-pwrstate" },
 	{ .compatible = "apple,pmgr-pwrstate" },
 	{ /* sentinel */ }
 };
@@ -138,7 +139,7 @@ static int apple_pmgr_probe(struct udevice *dev)
 	return 0;
 }
 
-struct power_domain_ops apple_pmgr_ops = {
+static const struct power_domain_ops apple_pmgr_ops = {
 	.on = apple_pmgr_on,
 	.of_xlate = apple_pmgr_of_xlate,
 };

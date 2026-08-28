@@ -16,7 +16,6 @@ General
    docstyle
    kconfig
    memory
-   patman
    process
    release_cycle
    security
@@ -50,6 +49,7 @@ Implementation
    logging
    makefiles
    menus
+   pmbus
    printf
    smbios
    spl

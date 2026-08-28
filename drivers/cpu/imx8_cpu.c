@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0+
 /*
- * Copyright 2019, 2024 NXP
+ * Copyright 2019, 2024-2026 NXP
  */
 
 #include <cpu.h>
@@ -28,8 +28,18 @@ struct cpu_imx_plat {
 	u32 mpidr;
 };
 
+__weak const char *get_cpu_variant_type_name(u32 type)
+{
+	return NULL;
+}
+
 static const char *get_imx_type_str(u32 imxtype)
 {
+	const char *name = get_cpu_variant_type_name(imxtype);
+
+	if (name)
+		return name;
+
 	switch (imxtype) {
 	case MXC_CPU_IMX8MM:
 		return "8MMQ";	/* Quad-core version of the imx8mm */
@@ -63,12 +73,18 @@ static const char *get_imx_type_str(u32 imxtype)
 		return "8MNano UltraLite Solo";/* Single-core UltraLite version of the imx8mn */
 	case MXC_CPU_IMX8MP:
 		return "8MP[8]";	/* Quad-core version of the imx8mp */
+	case MXC_CPU_IMX8MPD2:
+		return "8MP Dual[2]";   /* Dual-core version of the imx8mp, low cost industrial & HMI */
 	case MXC_CPU_IMX8MPD:
 		return "8MP Dual[3]";	/* Dual-core version of the imx8mp */
 	case MXC_CPU_IMX8MPL:
 		return "8MP Lite[4]";	/* Quad-core Lite version of the imx8mp */
+	case MXC_CPU_IMX8MP5:
+		return "8MP[5]";        /* Quad-core version of the imx8mp, low cost industrial & HMI */
 	case MXC_CPU_IMX8MP6:
 		return "8MP[6]";	/* Quad-core version of the imx8mp, NPU fused */
+	case MXC_CPU_IMX8MPUL:
+		return "8MP UltraLite"; /* Quad-core UltraLite version of the imx8mp */
 	case MXC_CPU_IMX8MQ:
 		return "8MQ";	/* Quad-core version of the imx8mq */
 	case MXC_CPU_IMX8MQL:
@@ -222,7 +238,7 @@ static int cpu_imx_get_desc(const struct udevice *dev, char *buf, int size)
 	ret = snprintf(buf, size, "NXP i.MX%s Rev%s %s at %u MHz",
 		       plat->type, plat->rev, plat->name, plat->freq_mhz);
 
-	if (IS_ENABLED(CONFIG_IMX_TMU)) {
+	if (!IS_ENABLED(CONFIG_IMX8)) { /* imx8 does not have segment fuse */
 		switch (get_cpu_temp_grade(&minc, &maxc)) {
 		case TEMP_AUTOMOTIVE:
 			grade = "Automotive temperature grade";
@@ -231,7 +247,10 @@ static int cpu_imx_get_desc(const struct udevice *dev, char *buf, int size)
 			grade = "Industrial temperature grade";
 			break;
 		case TEMP_EXTCOMMERCIAL:
-			grade = "Extended Consumer temperature grade";
+			if (IS_ENABLED(CONFIG_ARCH_IMX9))
+				grade = "Extended Industrial temperature grade";
+			else
+				grade = "Extended Consumer temperature grade";
 			break;
 		default:
 			grade = "Consumer temperature grade";
@@ -371,6 +390,7 @@ static int imx_cpu_probe(struct udevice *dev)
 {
 	struct cpu_imx_plat *plat = dev_get_plat(dev);
 	u32 cpurev;
+	fdt_addr_t addr;
 
 	set_core_data(dev);
 	cpurev = get_cpu_rev();
@@ -378,11 +398,13 @@ static int imx_cpu_probe(struct udevice *dev)
 	get_imx_rev_str(plat, cpurev & 0xFFF);
 	plat->type = get_imx_type_str((cpurev & 0x1FF000) >> 12);
 	plat->freq_mhz = imx_get_cpu_rate(dev) / 1000000;
-	plat->mpidr = dev_read_addr(dev);
-	if (plat->mpidr == FDT_ADDR_T_NONE) {
+	addr = dev_read_addr(dev);
+	if (addr == FDT_ADDR_T_NONE) {
 		printf("%s: Failed to get CPU reg property\n", __func__);
 		return -EINVAL;
 	}
+
+	plat->mpidr = (u32)addr;
 
 	return 0;
 }

@@ -292,7 +292,7 @@ static int smbios_get_val_si(struct smbios_ctx * __maybe_unused ctx,
 
 	/* If the node is still missing, try with the mapping values */
 	nprop = convert_sysinfo_to_dt(ctx->subnode_name, prop);
-	if (!ofnode_read_u32(ofnode_root(), nprop->dt_str, &val))
+	if (nprop && !ofnode_read_u32(ofnode_root(), nprop->dt_str, &val))
 		return val;
 #endif
 	return val_def;
@@ -679,7 +679,7 @@ static int smbios_write_type3(ulong *current, int *handle,
 	t->serial_number = smbios_add_prop_si(ctx, "serial",
 					      SYSID_SM_ENCLOSURE_SERIAL, NULL);
 	t->asset_tag_number = smbios_add_prop_si(ctx, "asset-tag",
-						 SYSID_SM_BASEBOARD_ASSET_TAG,
+						 SYSID_SM_ENCLOSURE_ASSET_TAG,
 						 NULL);
 	t->oem_defined = smbios_get_val_si(ctx, "oem-defined",
 					   SYSID_SM_ENCLOSURE_OEM, 0);

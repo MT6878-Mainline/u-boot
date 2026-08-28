@@ -204,6 +204,9 @@ static int get_aligned_image_size(struct spl_load_info *info, int data_size,
  *		If the FIT node does not contain a "load" (address) property,
  *		the image gets loaded to the address pointed to by the
  *		load_addr member in this struct, if load_addr is not 0
+ * @max_size:	maximum number of bytes that may be written to the
+ *		destination; an image whose data exceeds this is rejected
+ *		before it is read from the device
  *
  * Return:	0 on success, -EBADSLT if this image is not the correct phase
  * (for CONFIG_BOOTMETH_VBE_SIMPLE_FW), or another negative error number on
@@ -211,7 +214,7 @@ static int get_aligned_image_size(struct spl_load_info *info, int data_size,
  */
 static int load_simple_fit(struct spl_load_info *info, ulong fit_offset,
 			   const struct spl_fit_info *ctx, int node,
-			   struct spl_image_info *image_info)
+			   struct spl_image_info *image_info, ulong max_size)
 {
 	int offset;
 	size_t length;
@@ -291,6 +294,23 @@ static int load_simple_fit(struct spl_load_info *info, ulong fit_offset,
 			return 0;
 		}
 
+		/*
+		 * data-size is excluded from the configuration signature (it
+		 * is in exc_prop[] in image-fit-sig.c), so it stays attacker
+		 * controlled even after fit_config_verify() succeeds. The
+		 * image hash is only verified after the device read below, so
+		 * an oversized value has to be rejected here.
+		 *
+		 * Bail out before get_aligned_image_size() runs on a hostile
+		 * len: that helper does its arithmetic in int and would
+		 * invoke signed-integer overflow on a value close to or above
+		 * INT_MAX. The block-aligned check further down is the
+		 * mathematically binding one, since size is len rounded up to
+		 * the device block length.
+		 */
+		if ((ulong)len > max_size)
+			goto too_big;
+
 		if (spl_decompression_enabled() &&
 		    (image_comp == IH_COMP_GZIP || image_comp == IH_COMP_LZMA))
 			src_ptr = map_sysmem(ALIGN(CONFIG_SYS_LOAD_ADDR, ARCH_DMA_MINALIGN), len);
@@ -302,6 +322,15 @@ static int load_simple_fit(struct spl_load_info *info, ulong fit_offset,
 		size = get_aligned_image_size(info, length, offset);
 		read_offset = fit_offset + get_aligned_image_offset(info,
 							    offset);
+
+		/*
+		 * info->read() transfers the block-aligned size into the
+		 * destination, so this is the bound that actually matters;
+		 * len was rejected above only to keep this computation safe.
+		 */
+		if (size > max_size)
+			goto too_big;
+
 		log_debug("reading from offset %x / %lx size %lx to %p: ",
 			  offset, read_offset, size, src_ptr);
 
@@ -372,6 +401,11 @@ static int load_simple_fit(struct spl_load_info *info, ulong fit_offset,
 	upl_add_image(fit, node, load_addr, length);
 
 	return 0;
+
+too_big:
+	printf("%s: FIT image too large (data-size %u, max %lu)\n",
+	       __func__, (u32)len, max_size);
+	return -EFBIG;
 }
 
 static bool os_takes_devicetree(uint8_t os)
@@ -427,7 +461,8 @@ static int spl_fit_append_fdt(struct spl_image_info *spl_image,
 		spl_image->fdt_addr = map_sysmem(image_info.load_addr, size);
 		memcpy(spl_image->fdt_addr, gd->fdt_blob, size);
 	} else {
-		ret = load_simple_fit(info, offset, ctx, node, &image_info);
+		ret = load_simple_fit(info, offset, ctx, node, &image_info,
+				      CONFIG_SYS_BOOTM_LEN);
 		if (ret < 0)
 			return ret;
 
@@ -479,7 +514,8 @@ static int spl_fit_append_fdt(struct spl_image_info *spl_image,
 			}
 			image_info.load_addr = (ulong)tmpbuffer;
 			ret = load_simple_fit(info, offset, ctx, node,
-					      &image_info);
+					      &image_info,
+					      CONFIG_SPL_LOAD_FIT_APPLY_OVERLAY_BUF_SZ);
 			if (ret == -EBADSLT)
 				continue;
 			else if (ret < 0)
@@ -687,7 +723,8 @@ static int spl_fit_load_fpga(struct spl_fit_info *ctx,
 	warn_deprecated("'fpga' property in config node. Use 'loadables'");
 
 	/* Load the image and set up the fpga_image structure */
-	ret = load_simple_fit(info, offset, ctx, node, &fpga_image);
+	ret = load_simple_fit(info, offset, ctx, node, &fpga_image,
+			      CONFIG_SYS_BOOTM_LEN);
 	if (ret) {
 		printf("%s: Cannot load the FPGA: %i\n", __func__, ret);
 		return ret;
@@ -775,7 +812,7 @@ static int spl_simple_fit_parse(struct spl_fit_info *ctx)
 	if (ctx->conf_node < 0)
 		return -EINVAL;
 
-	if (IS_ENABLED(CONFIG_SPL_FIT_SIGNATURE)) {
+	if (CONFIG_IS_ENABLED(FIT_SIGNATURE)) {
 		printf("## Checking hash(es) for config %s ... ",
 		       fit_get_name(ctx->fit, ctx->conf_node, NULL));
 		if (fit_config_verify(ctx->fit, ctx->conf_node))
@@ -849,7 +886,8 @@ int spl_load_simple_fit(struct spl_image_info *spl_image,
 	}
 
 	/* Load the image and set up the spl_image structure */
-	ret = load_simple_fit(info, offset, &ctx, node, spl_image);
+	ret = load_simple_fit(info, offset, &ctx, node, spl_image,
+			      CONFIG_SYS_BOOTM_LEN);
 	if (ret)
 		return ret;
 
@@ -890,7 +928,8 @@ int spl_load_simple_fit(struct spl_image_info *spl_image,
 			continue;
 
 		image_info.load_addr = 0;
-		ret = load_simple_fit(info, offset, &ctx, node, &image_info);
+		ret = load_simple_fit(info, offset, &ctx, node, &image_info,
+				      CONFIG_SYS_BOOTM_LEN);
 		if (ret < 0 && ret != -EBADSLT) {
 			printf("%s: can't load image loadables index %d (ret = %d)\n",
 			       __func__, index, ret);
@@ -955,22 +994,12 @@ int spl_load_fit_image(struct spl_image_info *spl_image,
 	int idx, conf_noffset;
 	int ret;
 
-#ifdef CONFIG_SPL_FIT_SIGNATURE
-	images.verify = 1;
-#endif
+	images.verify = CONFIG_IS_ENABLED(FIT_SIGNATURE);
+
 	ret = fit_image_load(&images, virt_to_phys((void *)header),
-			     NULL, &fit_uname_config,
-			     IH_ARCH_DEFAULT, IH_TYPE_STANDALONE, -1,
-			     FIT_LOAD_OPTIONAL, &fw_data, &fw_len);
-	if (ret >= 0) {
-		printf("DEPRECATED: 'standalone = ' property.");
-		printf("Please use either 'firmware =' or 'kernel ='\n");
-	} else {
-		ret = fit_image_load(&images, virt_to_phys((void *)header),
-				     NULL, &fit_uname_config, IH_ARCH_DEFAULT,
-				     IH_TYPE_FIRMWARE, -1, FIT_LOAD_OPTIONAL,
-				     &fw_data, &fw_len);
-	}
+			     NULL, &fit_uname_config, IH_ARCH_DEFAULT,
+			     IH_TYPE_FIRMWARE, -1, FIT_LOAD_OPTIONAL,
+			     &fw_data, &fw_len);
 
 	if (ret < 0) {
 		ret = fit_image_load(&images, virt_to_phys((void *)header),
@@ -993,21 +1022,21 @@ int spl_load_fit_image(struct spl_image_info *spl_image,
 	debug(PHASE_PROMPT "payload image: %32s load addr: 0x%lx size: %d\n",
 	      spl_image->name, spl_image->load_addr, spl_image->size);
 
-#ifdef CONFIG_SPL_FIT_SIGNATURE
-	images.verify = 1;
-#endif
+	images.verify = CONFIG_IS_ENABLED(FIT_SIGNATURE);
+
 	ret = fit_image_load(&images, virt_to_phys((void *)header), NULL,
 			     &fit_uname_config, IH_ARCH_DEFAULT, IH_TYPE_FLATDT,
 			     -1, FIT_LOAD_OPTIONAL, &dt_data, &dt_len);
 	if (ret >= 0) {
-		spl_image->fdt_addr = (void *)dt_data;
-
 		if (spl_image->os == IH_OS_U_BOOT) {
 			/* HACK: U-Boot expects FDT at a specific address */
-			fdt_hack = spl_image->load_addr + spl_image->size;
-			fdt_hack = (fdt_hack + 3) & ~3;
-			debug("Relocating FDT to %p\n", spl_image->fdt_addr);
-			memcpy((void *)fdt_hack, spl_image->fdt_addr, dt_len);
+			fdt_hack = ALIGN(spl_image->load_addr + spl_image->size, 8);
+			debug("Relocating FDT to %p\n", (void *)fdt_hack);
+			memcpy(map_sysmem(fdt_hack, dt_len),
+			       map_sysmem(dt_data, 0), dt_len);
+			spl_image->fdt_addr = (void *)fdt_hack;
+		} else {
+			spl_image->fdt_addr = (void *)dt_data;
 		}
 	}
 
@@ -1021,10 +1050,9 @@ int spl_load_fit_image(struct spl_image_info *spl_image,
 					FIT_LOADABLE_PROP, idx,
 				NULL), uname;
 	     idx++) {
-#ifdef CONFIG_SPL_FIT_SIGNATURE
-		images.verify = 1;
-#endif
-		ret = fit_image_load(&images, (ulong)header,
+		images.verify = CONFIG_IS_ENABLED(FIT_SIGNATURE);
+
+		ret = fit_image_load(&images, virt_to_phys((void *)header),
 				     &uname, &fit_uname_config,
 				     IH_ARCH_DEFAULT, IH_TYPE_LOADABLE, -1,
 				     FIT_LOAD_OPTIONAL_NON_ZERO,

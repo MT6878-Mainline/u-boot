@@ -26,7 +26,9 @@
 #include <fdtdec.h>
 #include <miiphy.h>
 #include "../common/qixis.h"
+#ifdef CONFIG_FSL_ENETC
 #include "../drivers/net/fsl_enetc.h"
+#endif
 
 DECLARE_GLOBAL_DATA_PTR;
 
@@ -103,11 +105,6 @@ int board_init(void)
 	return 0;
 }
 
-int board_eth_init(struct bd_info *bis)
-{
-	return pci_eth_init(bis);
-}
-
 #ifdef CONFIG_MISC_INIT_R
 int misc_init_r(void)
 {
@@ -152,7 +149,7 @@ int board_early_init_f(void)
 void detail_board_ddr_info(void)
 {
 	puts("\nDDR    ");
-	print_size(gd->bd->bi_dram[0].size + gd->bd->bi_dram[1].size, "");
+	print_size(gd->dram[0].size + gd->dram[1].size, "");
 	print_ddr_info(0);
 }
 
@@ -205,10 +202,10 @@ int ft_board_setup(void *blob, struct bd_info *bd)
 	ft_cpu_setup(blob, bd);
 
 	/* fixup DT for the two GPP DDR banks */
-	base[0] = gd->bd->bi_dram[0].start;
-	size[0] = gd->bd->bi_dram[0].size;
-	base[1] = gd->bd->bi_dram[1].start;
-	size[1] = gd->bd->bi_dram[1].size;
+	base[0] = gd->dram[0].start;
+	size[0] = gd->dram[0].size;
+	base[1] = gd->dram[1].start;
+	size[1] = gd->dram[1].size;
 
 #ifdef CONFIG_RESV_RAM
 	/* reduce size if reserved memory is within this bank */

@@ -42,15 +42,10 @@ void board_debug_uart_init(void)
 }
 #endif
 
-int board_early_init_f(void)
-{
-	return 0;
-}
-
 int board_init(void)
 {
 	/* address of boot parameters */
-	gd->bd->bi_boot_params = gd->bd->bi_dram[0].start + 0x100;
+	gd->bd->bi_boot_params = gd->dram[0].start + 0x100;
 
 	return 0;
 }

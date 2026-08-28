@@ -752,6 +752,7 @@ static const struct udevice_id qcom_spmi_pmic_gpio_ids[] = {
 	{ .compatible = "qcom,pm8550b-gpio" },
 	{ .compatible = "qcom,pm8550ve-gpio" },
 	{ .compatible = "qcom,pm8550vs-gpio" },
+	{ .compatible = "qcom,pm8998-gpio" },
 	{ .compatible = "qcom,pmk8550-gpio" },
 	{ .compatible = "qcom,pmr735d-gpio" },
 	{ }
@@ -1020,7 +1021,7 @@ static int qcom_spmi_pmic_pinctrl_pinmux_set_mux(struct udevice *dev, unsigned i
 	return spmi_pmic_gpio_write(plat, pad, PMIC_GPIO_REG_EN_CTL, val);
 }
 
-struct pinctrl_ops qcom_spmi_pmic_pinctrl_ops = {
+static const struct pinctrl_ops qcom_spmi_pmic_pinctrl_ops = {
 	.get_pins_count = qcom_spmi_pmic_pinctrl_get_pins_count,
 	.get_pin_name = qcom_spmi_pmic_pinctrl_get_pin_name,
 	.set_state = pinctrl_generic_set_state,

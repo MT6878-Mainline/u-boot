@@ -136,7 +136,7 @@ static int testacpi_inject_dsdt(const struct udevice *dev, struct acpi_ctx *ctx)
 	return 0;
 }
 
-struct acpi_ops testacpi_ops = {
+static const struct acpi_ops testacpi_ops = {
 	.get_name	= testacpi_get_name,
 	.write_tables	= testacpi_write_tables,
 	.fill_madt	= testacpi_fill_madt,
@@ -374,14 +374,14 @@ static int dm_test_acpi_ctx_and_base_tables(struct unit_test_state *uts)
 	rsdt = PTR_ALIGN((void *)rsdp + sizeof(*rsdp), 16);
 	ut_asserteq_ptr(rsdt, ctx.rsdt);
 	ut_asserteq_mem("RSDT", rsdt->header.signature, ACPI_NAME_LEN);
-	ut_asserteq(sizeof(*rsdt), rsdt->header.length);
-	ut_assertok(table_compute_checksum(rsdt, sizeof(*rsdt)));
+	ut_asserteq(sizeof(struct acpi_table_header), rsdt->header.length);
+	ut_assertok(table_compute_checksum(rsdt, rsdt->header.length));
 
 	xsdt = PTR_ALIGN((void *)rsdt + sizeof(*rsdt), 16);
 	ut_asserteq_ptr(xsdt, ctx.xsdt);
 	ut_asserteq_mem("XSDT", xsdt->header.signature, ACPI_NAME_LEN);
-	ut_asserteq(sizeof(*xsdt), xsdt->header.length);
-	ut_assertok(table_compute_checksum(xsdt, sizeof(*xsdt)));
+	ut_asserteq(sizeof(struct acpi_table_header), xsdt->header.length);
+	ut_assertok(table_compute_checksum(xsdt, xsdt->header.length));
 
 	end = PTR_ALIGN((void *)xsdt + sizeof(*xsdt), 64);
 	ut_asserteq_ptr(end, ctx.current);

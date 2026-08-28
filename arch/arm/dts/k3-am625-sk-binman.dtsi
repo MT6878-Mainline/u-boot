@@ -263,12 +263,21 @@
 			};
 
 			configurations {
-				default = "conf-0";
-				conf-0 {
-					description = "k3-am625-sk-falcon";
+				default = "conf-hs-fs";
+				conf-hs-fs {
+					description = "k3-am625-sk-falcon-hs-fs";
 					firmware = "atf";
-					loadables = "tee", "tifsstub-hs", "tifsstub-fs",
-					"tifsstub-gp", "dm";
+					loadables = "tee", "tifsstub-fs", "dm";
+				};
+				conf-hs-se {
+					description = "k3-am625-sk-falcon-hs-se";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-hs", "dm";
+				};
+				conf-gp {
+					description = "k3-am625-sk-falcon-gp";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-gp", "dm";
 				};
 			};
 		};
@@ -376,13 +385,24 @@
 			};
 
 			configurations {
-				default = "conf-0";
+				default = "conf-hs-fs";
 
-				conf-0 {
-					description = "k3-am625-sk";
+				conf-hs-fs {
+					description = "k3-am625-sk-hs-fs";
 					firmware = "atf";
-					loadables = "tee", "tifsstub-hs", "tifsstub-fs",
-					"tifsstub-gp", "dm", "spl";
+					loadables = "tee", "tifsstub-fs", "dm", "spl";
+					fdt = "fdt-0";
+				};
+				conf-hs-se {
+					description = "k3-am625-sk-hs-se";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-hs", "dm", "spl";
+					fdt = "fdt-0";
+				};
+				conf-gp {
+					description = "k3-am625-sk-gp";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-gp", "dm", "spl";
 					fdt = "fdt-0";
 				};
 			};
@@ -497,13 +517,24 @@
 			};
 
 			configurations {
-				default = "conf-0";
+				default = "conf-hs-fs";
 
-				conf-0 {
-					description = "k3-am625-sk";
+				conf-hs-fs {
+					description = "k3-am625-sk-hs-fs";
 					firmware = "atf";
-					loadables = "tee", "tifsstub-hs", "tifsstub-fs",
-						  "tifsstub-gp", "dm", "spl";
+					loadables = "tee", "tifsstub-fs", "dm", "spl";
+					fdt = "fdt-0";
+				};
+				conf-hs-se {
+					description = "k3-am625-sk-hs-se";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-hs", "dm", "spl";
+					fdt = "fdt-0";
+				};
+				conf-gp {
+					description = "k3-am625-sk-gp";
+					firmware = "atf";
+					loadables = "tee", "tifsstub-gp", "dm", "spl";
 					fdt = "fdt-0";
 				};
 			};

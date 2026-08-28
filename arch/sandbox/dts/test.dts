@@ -176,7 +176,7 @@
 			storage = "mmc3";
 			skip-offset = <0x800000>;
 			area-start = <0>;
-			area-size = <0xe00000>;
+			area-size = <0x2000000>;
 			state-offset = <0xdffc00>;
 			state-size = <0x40>;
 			version-offset = <0xdffe00>;
@@ -1027,6 +1027,9 @@
 			emul1: emull {
 				compatible = "sandbox,i2c-rtc-emul";
 			};
+			emul_pmbus: emul-pmbus {
+				compatible = "sandbox,i2c-pmbus";
+			};
 		};
 
 		sandbox_pmic: sandbox_pmic@40 {
@@ -1037,6 +1040,13 @@
 		mc34708: pmic@41 {
 			reg = <0x41>;
 			sandbox,emul = <&emul_pmic1>;
+		};
+
+		pmbus@70 {
+			reg = <0x70>;
+			compatible = "pmbus";
+			regulator-name = "sandbox-pmbus-vout";
+			sandbox,emul = <&emul_pmbus>;
 		};
 	};
 
@@ -1530,10 +1540,16 @@
 		#reset-cells = <1>;
 	};
 
+	resetc_fb: reset-ctl-fallback {
+		compatible = "sandbox,reset-ctl-fallback-only";
+		#reset-cells = <1>;
+	};
+
 	reset-ctl-test {
 		compatible = "sandbox,reset-ctl-test";
-		resets = <&resetc 100>, <&resetc 2>, <&resetc 20>, <&resetc 40>;
-		reset-names = "other", "test", "test2", "test3";
+		resets = <&resetc 100>, <&resetc 2>, <&resetc 20>, <&resetc 40>,
+			 <&resetc_fb 5>;
+		reset-names = "other", "test", "test2", "test3", "fallback";
 	};
 
 	rng {

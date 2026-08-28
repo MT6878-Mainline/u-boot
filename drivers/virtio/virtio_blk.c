@@ -13,6 +13,7 @@
 #include <virtio.h>
 #include <virtio_ring.h>
 #include <linux/log2.h>
+#include <linux/err.h>
 #include "virtio_blk.h"
 #include <malloc.h>
 
@@ -181,7 +182,7 @@ static ulong virtio_blk_do_req(struct udevice *dev, u64 sector,
 
 		ret = virtio_blk_do_single_req(dev, sector + i, blk_per_sg,
 					       buffer + i * 512, type);
-		if (ret < 0)
+		if (IS_ERR_VALUE(ret))
 			return ret;
 		i += blk_per_sg;
 	}
@@ -231,14 +232,11 @@ static int virtio_blk_bind(struct udevice *dev)
 		return devnum;
 	desc->devnum = devnum;
 	desc->part_type = PART_TYPE_UNKNOWN;
-	/*
-	 * virtio mmio transport supplies string identification for us,
-	 * while pci trnasport uses a 2-byte subvendor value.
-	 */
-	if (uc_priv->vendor >> 16)
-		sprintf(desc->vendor, "%s", (char *)&uc_priv->vendor);
+
+	if (uc_priv->vendor == VIRTIO_VENDOR_QEMU)
+		strcpy(desc->vendor, "QEMU");
 	else
-		sprintf(desc->vendor, "%04x", uc_priv->vendor);
+		sprintf(desc->vendor, "%08x", uc_priv->vendor);
 	desc->bdev = dev;
 
 	/* Indicate what driver features we support */

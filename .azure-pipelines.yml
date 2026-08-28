@@ -1,5 +1,4 @@
 variables:
-  windows_vm: windows-2022
   ubuntu_vm: ubuntu-24.04
   macos_vm: macOS-14
   ci_runner_image: trini/u-boot-gitlab-ci-runner:noble-20251013-23Jan2026
@@ -44,33 +43,6 @@ variables:
 stages:
 - stage: testsuites
   jobs:
-  - job: tools_only_windows
-    displayName: 'Ensure host tools build for Windows'
-    pool:
-      vmImage: $(windows_vm)
-    steps:
-      - powershell: |
-          (New-Object Net.WebClient).DownloadFile("https://github.com/msys2/msys2-installer/releases/download/2021-06-04/msys2-base-x86_64-20210604.sfx.exe", "sfx.exe")
-        displayName: 'Install MSYS2'
-      - script: |
-          sfx.exe -y -o%CD:~0,2%\
-          %CD:~0,2%\msys64\usr\bin\bash -lc " "
-          %CD:~0,2%\msys64\usr\bin\bash -lc "pacman --noconfirm -Syuu"
-          %CD:~0,2%\msys64\usr\bin\bash -lc "pacman --noconfirm -Syuu"
-        displayName: 'Update MSYS2'
-      - script: |
-          %CD:~0,2%\msys64\usr\bin\bash -lc "pacman --noconfirm --needed -Sy make gcc bison flex diffutils openssl-devel libgnutls-devel libutil-linux-devel"
-        displayName: 'Install Toolchain'
-      - script: |
-          echo make tools-only_defconfig tools-only > build-tools.sh
-          %CD:~0,2%\msys64\usr\bin\bash -lc "bash build-tools.sh"
-        displayName: 'Build Host Tools'
-        env:
-          # Tell MSYS2 we need a POSIX emulation layer
-          MSYSTEM: MSYS
-          # Tell MSYS2 not to ‘cd’ our startup directory to HOME
-          CHERE_INVOKING: yes
-
   - job: tools_only_macOS
     displayName: 'Ensure host tools build for macOS X'
     pool:
@@ -146,7 +118,7 @@ stages:
           make tools-only_config envtools -j$(nproc)
 
   - job: utils
-    displayName: 'Run binman, buildman, dtoc, Kconfig and patman testsuites'
+    displayName: 'Run binman, buildman, dtoc and Kconfig testsuites'
     pool:
       vmImage: $(ubuntu_vm)
     container:
@@ -163,8 +135,8 @@ stages:
           pip install -r test/py/requirements.txt \
             -r tools/binman/requirements.txt \
             -r tools/buildman/requirements.txt \
-            -r tools/patman/requirements.txt \
-            -r tools/u_boot_pylib/requirements.txt
+            -r tools/u_boot_pylib/requirements.txt \
+            -r scripts/dtc/pylibfdt/requirements.txt
           export UBOOT_TRAVIS_BUILD_DIR=/tmp/tools-only
           export PYTHONPATH=${UBOOT_TRAVIS_BUILD_DIR}/scripts/dtc/pylibfdt
           export PATH=${UBOOT_TRAVIS_BUILD_DIR}/scripts/dtc:${PATH}
@@ -177,7 +149,6 @@ stages:
           COVERAGE_FILE=/tmp/.coverage ./tools/binman/binman ${TOOLPATH} test -T
           ./tools/buildman/buildman -t
           ./tools/dtoc/dtoc -t
-          ./tools/patman/patman test
           make O=${UBOOT_TRAVIS_BUILD_DIR} testconfig
 
   - job: pylint
@@ -196,8 +167,8 @@ stages:
           pip install -r test/py/requirements.txt \
             -r tools/binman/requirements.txt \
             -r tools/buildman/requirements.txt \
-            -r tools/patman/requirements.txt \
             -r tools/u_boot_pylib/requirements.txt \
+            -r scripts/dtc/pylibfdt/requirements.txt \
             asteval pylint==3.3.4 pyopenssl
           export PATH=${PATH}:~/.local/bin
           echo "[MASTER]" >> .pylintrc
@@ -494,10 +465,10 @@ stages:
           TEST_PY_TEST_SPEC: "not sleep"
         vexpress_fvp:
           TEST_PY_BD: "vexpress_fvp"
-          TEST_PY_TEST_SPEC: "not sleep and not hostfs"
+          TEST_PY_TEST_SPEC: "not sleep and not semihosting"
         vexpress_fvp_bloblist:
           TEST_PY_BD: "vexpress_fvp_bloblist"
-          TEST_PY_TEST_SPEC: "not sleep and not hostfs"
+          TEST_PY_TEST_SPEC: "not sleep and not semihosting"
         integratorcp_cm926ejs:
           TEST_PY_BD: "integratorcp_cm926ejs"
           TEST_PY_ID: "--id qemu"

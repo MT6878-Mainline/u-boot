@@ -5,7 +5,7 @@
 
 #include <asm/io.h>
 #include <compiler.h>
-#include <dbsc5.h>
+#include <r8a779g0-dbsc5.h>
 #include <spi.h>
 #include <spi_flash.h>
 #include <spl.h>
@@ -261,10 +261,10 @@ void renesas_dram_init_banksize(void)
 
 	/* 16 GiB device, adjust memory map. */
 	for (bank = 0; bank < CONFIG_NR_DRAM_BANKS; bank++) {
-		if (gd->bd->bi_dram[bank].start == 0x480000000ULL)
-			gd->bd->bi_dram[bank].size = 0x180000000ULL;
-		else if (gd->bd->bi_dram[bank].start == 0x600000000ULL)
-			gd->bd->bi_dram[bank].size = 0x200000000ULL;
+		if (gd->dram[bank].start == 0x480000000ULL)
+			gd->dram[bank].size = 0x180000000ULL;
+		else if (gd->dram[bank].start == 0x600000000ULL)
+			gd->dram[bank].size = 0x200000000ULL;
 	}
 }
 
